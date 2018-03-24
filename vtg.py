@@ -3,64 +3,64 @@ import ipaddress
 
 
 class vpn:
-    def __init__(self, name, key, peer, ti, ed):
+    def __init__(self, name, key, peer, ti, remote_endpoints):
         self.name = str(name)
         self.key = str(key)
         self.peer = str(peer)
         self.ti = str(ti)
-        self.ed = ed
+        self.remote_endpoints = remote_endpoints
         #self.dnat = dict(dnat)
 
 
 #PHASE-1
     def phase_1(self):
-        ike_proposal = '' +\
-        '\nset security ike proposal %s_PROPOSAL description \"VPN con %s\"' % (self.name, self.name) +\
-        '\nset security ike proposal %s_PROPOSAL authentication-method pre-shared-keys' % self.name +\
-        '\nset security ike proposal %s_PROPOSAL dh-group group2' % self.name +\
-        '\nset security ike proposal %s_PROPOSAL authentication-algorithm sha1' % self.name +\
-        '\nset security ike proposal %s_PROPOSAL encryption-algorithm aes-256-cbc' % self.name +\
-        '\nset security ike proposal %s_PROPOSAL lifetime-seconds 86400' % self.name +\
+        ike = '' +\
+        '\nset security ike proposal %s description \"VPN con %s\"' % (self.name, self.name) +\
+        '\nset security ike proposal %s authentication-method pre-shared-keys' % self.name +\
+        '\nset security ike proposal %s dh-group group2' % self.name +\
+        '\nset security ike proposal %s authentication-algorithm sha1' % self.name +\
+        '\nset security ike proposal %s encryption-algorithm aes-256-cbc' % self.name +\
+        '\nset security ike proposal %s lifetime-seconds 86400' % self.name +\
         '\n' +\
-        '\nset security ike policy %s_IKE_POLICY mode main' % self.name +\
-        '\nset security ike policy %s_IKE_POLICY proposals %s_PROPOSAL' % (self.name, self.name) +\
-        '\nset security ike policy %s_IKE_POLICY pre-shared-key ascii-text %s' % (self.name, self.key)
+        '\nset security ike policy %s mode main' % self.name +\
+        '\nset security ike policy %s proposals %s' % (self.name, self.name) +\
+        '\nset security ike policy %s pre-shared-key ascii-text %s' % (self.name, self.key)
 
-        return ike_proposal
+        return ike
 
 #PHASE-2
     def phase_2(self):
-        ipsec_proposal = '' +\
-        '\nset security ipsec proposal %s_PHASE2_PROPOSAL protocol esp' % self.name +\
-        '\nset security ipsec proposal %s_PHASE2_PROPOSAL authentication-algorithm hmac-sha1-96' % self.name +\
-        '\nset security ipsec proposal %s_PHASE2_PROPOSAL encryption-algorithm aes-256-cbc' % self.name +\
-        '\nset security ipsec proposal %s_PHASE2_PROPOSAL lifetime-seconds 3600' % self.name +\
+        ipsec = '' +\
+        '\nset security ipsec proposal %s protocol esp' % self.name +\
+        '\nset security ipsec proposal %s authentication-algorithm hmac-sha1-96' % self.name +\
+        '\nset security ipsec proposal %s encryption-algorithm aes-256-cbc' % self.name +\
+        '\nset security ipsec proposal %s lifetime-seconds 3600' % self.name +\
         '\n' +\
-        '\nset security ipsec policy %s_IPSEC_POLICY proposals %s_PHASE2_PROPOSAL' % (self.name, self.name)
+        '\nset security ipsec policy %s_IPSEC_POLICY proposals %s' % (self.name, self.name)
 
-        return ipsec_proposal
+        return ipsec
 
 
 #IKE GATEWAY
 
     def ike_gateway(self):
         ikegateway = '' +\
-        '\nset security ike gateway %s_IKE_GATEWAY ike-policy %s_IKE_POLICY' % (self.name, self.name) +\
-        '\nset security ike gateway %s_IKE_GATEWAY address %s' % (self.name, self.peer) +\
-        '\nset security ike gateway %s_IKE_GATEWAY dead-peer-detection always-send' % self.name +\
-        '\nset security ike gateway %s_IKE_GATEWAY external-interface reth1.404' % self.name +\
-        '\nset security ike gateway %s_IKE_GATEWAY general-ikeid' % self.name
+        '\nset security ike gateway %s ike-policy %s' % (self.name, self.name) +\
+        '\nset security ike gateway %s address %s' % (self.name, self.peer) +\
+        '\nset security ike gateway %s dead-peer-detection always-send' % self.name +\
+        '\nset security ike gateway %s external-interface reth1.404' % self.name +\
+        '\nset security ike gateway %s general-ikeid' % self.name
 
         return ikegateway
 
 
 #VPN TUNEL DEFINITION
-    def vpn_tunnel(self):
+    def vpn(self):
         vpntunnel = '' +\
-        '\nset security ipsec vpn %s_TUNNEL bind-interface st0.%s' % (self.name, self.ti) +\
-        '\nset security ipsec vpn %s_TUNNEL ike gateway %s_IKE_GATEWAY' % (self.name, self.name) +\
-        '\nset security ipsec vpn %s_TUNNEL ike ipsec-policy %s_IPSEC_POLICY' % (self.name, self.name) +\
-        '\nset security ipsec vpn %s_TUNNEL establish-tunnels immediately' % self.name
+        '\nset security ipsec vpn %s bind-interface st0.%s' % (self.name, self.ti) +\
+        '\nset security ipsec vpn %s ike gateway %s' % (self.name, self.name) +\
+        '\nset security ipsec vpn %s ike ipsec-policy %s_IPSEC_POLICY' % (self.name, self.name) +\
+        '\nset security ipsec vpn %s establish-tunnels immediately' % self.name
 
         return vpntunnel
 
@@ -77,19 +77,25 @@ class vpn:
 
 #STATIC ROUTE
     def static_route(self):
-        for ip in self.ed: print('\nset routing-options static route %s next-hop st0.%s' % (ipaddress.ip_network(ip), self.ti))
+        static_routes = []
+        for ip in self.remote_endpoints: static_routes.append('set routing-options static route %s next-hop st0.%s' % (ipaddress.ip_network(ip), self.ti))
+        sr = ''
+        for ip in static_routes: sr = sr + '\n' + ip
+        return sr
 
 
 #MODIFYING PREFIX-LIST TO PROCESS THE NEW VPN TRAFFIC
     def prefix_list(self):
-        for ip in self.ed: print('\nset policy-options prefix-list PBR_Inet-0 %s' % ipaddress.ip_network(ip))
-        #set policy-options prefix-list PBR_Inet-0 172.22.2.77/32
-        #set policy-options prefix-list PBR_Inet-0 172.22.2.78/32
+        epoints = []
+        for ip in self.remote_endpoints: epoints.append('set policy-options prefix-list PBR_Inet-0 %s' % ipaddress.ip_network(ip))
+        pl = ''
+        for prefixes in epoints: pl = pl + '\n' + prefixes
+        return pl
 
 
 #NATs
 
-#OUTBOUND TRAFFIC FROM MELI DC TO REMOTE-ENDPOINTS:
+#OUTBOUND TRAFFIC FROM MELI TO REMOTE-ENDPOINTS:
 
     #def outbound_nat(self):
     #    for ip in self.ed: print('\nset security nat source pool %s_POOL_TEST address %s' % (self.name, ipaddress.ip_network(ip)))
@@ -188,10 +194,10 @@ def main():
     print(new_vpn.phase_1())
     print(new_vpn.phase_2())
     print(new_vpn.ike_gateway())
-    print(new_vpn.vpn_tunnel())
+    print(new_vpn.vpn())
     print(new_vpn.tunel_interface())
-    new_vpn.static_route()
-    new_vpn.prefix_list()
+    print(new_vpn.static_route())
+    print(new_vpn.prefix_list())
     #new_vpn.outbound_nat()
     #new_vpn.inbound_nat()
 
