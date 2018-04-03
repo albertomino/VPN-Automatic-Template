@@ -3,12 +3,15 @@ import ipaddress
 
 
 class vpn:
-    def __init__(self, name, key, peer, ti, remote_endpoints):
+    def __init__(self, name, key, peer, ti, remote_enc_domains, source_enc_domain, local_sources, dports):
         self.name = str(name)
         self.key = str(key)
         self.peer = str(peer)
         self.ti = str(ti)
-        self.remote_endpoints = remote_endpoints
+        self.remote_enc_domains = remote_enc_domains
+        self.source_enc_domain = source_enc_domain
+        self.local_sources = local_sources
+        self.dports = dports
         #self.dnat = dict(dnat)
 
 
@@ -78,7 +81,7 @@ class vpn:
 #STATIC ROUTE
     def static_route(self):
         static_routes = []
-        for ip in self.remote_endpoints: static_routes.append('set routing-options static route %s next-hop st0.%s' % (ipaddress.ip_network(ip), self.ti))
+        for ip in self.remote_enc_domains: static_routes.append('set routing-options static route %s next-hop st0.%s' % (ipaddress.ip_network(ip), self.ti))
         sr = ''
         for ip in static_routes: sr = sr + '\n' + ip
         return sr
@@ -87,7 +90,7 @@ class vpn:
 #MODIFYING PREFIX-LIST TO PROCESS THE NEW VPN TRAFFIC
     def prefix_list(self):
         epoints = []
-        for ip in self.remote_endpoints: epoints.append('set policy-options prefix-list PBR_Inet-0 %s' % ipaddress.ip_network(ip))
+        for ip in self.remote_enc_domains: epoints.append('set policy-options prefix-list PBR_Inet-0 %s' % ipaddress.ip_network(ip))
         pl = ''
         for prefixes in epoints: pl = pl + '\n' + prefixes
         return pl
@@ -97,8 +100,29 @@ class vpn:
 
 #OUTBOUND TRAFFIC FROM MELI TO REMOTE-ENDPOINTS:
 
-    #def outbound_nat(self):
-    #    for ip in self.ed: print('\nset security nat source pool %s_POOL_TEST address %s' % (self.name, ipaddress.ip_network(ip)))
+    def source_pool(self):
+        #source_pools = []
+        #source_pools.append('set security nat source pool SOURCE-POOL-%s_%s address %s' % (self.name, self.source_enc_domain, source_enc_domain))
+        spools = 'set security nat source pool SOURCE-POOL-%s_%s address %s' % (self.name, self.source_enc_domain, self.source_enc_domain)
+        #for prefixes in source_pools: spools = spools + '\n' + prefixes
+        self.snat_pool_name = 'SOURCE-POOL-%s_%s' % (self.name, self.source_enc_domain)
+        return spools
+
+    def outbound_nat(self):
+        lsources = []
+        rendpoints = []
+        dports = []
+        for ip in self.local_sources: lsources.append('set security nat source rule-set NAT_SRC_VPN rule SNAT-VPN-%s match source-address %s' % (self.name, ipaddress.ip_network(ip)))
+        for ip in self.remote_enc_domains: rendpoints.append('set security nat source rule-set NAT_SRC_VPN rule SNAT-VPN-%s match destination-address %s' % (self.name, ipaddress.ip_network(ip)))
+        for port in self.dports: dports.append('set security nat source rule-set NAT_SRC_VPN rule SNAT-VPN-%s match destination-port %s' % (self.name, port))
+        outbound_nat = ''
+        for sources in lsources: outbound_nat = outbound_nat + '\n' + sources
+        for rendpoint in rendpoints: outbound_nat = outbound_nat + '\n' + rendpoint
+        for dport in dports: outbound_nat = outbound_nat + '\n' + dport
+        outbound_nat = outbound_nat + '\n' + 'set security nat source rule-set NAT_SRC_VPN rule SNAT-VPN-%s then source-nat pool %s' % (self.name, self.snat_pool_name)
+        return outbound_nat
+
+
     #set security nat source pool SITE-A_Pool_TEST address 192.168.0.30/32
     #set security nat source pool SITE-A_Pool_PROD address 192.168.0.31/32
     #set security nat source rule-set NAT_SRC_VPN rule CLIENTE-SITE-A-TEST_NAT match source-address  10.10.52.0/23 (SERVER O RED ORIGEN MELI)
@@ -190,7 +214,7 @@ yY4bAGPGuZ67XRHz
 '''
 
 def main():
-    new_vpn = vpn(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5].split(','))
+    new_vpn = vpn(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5].split(','), sys.argv[6], sys.argv[7].split(','), sys.argv[8].split(','))
     print(new_vpn.phase_1())
     print(new_vpn.phase_2())
     print(new_vpn.ike_gateway())
@@ -198,6 +222,8 @@ def main():
     print(new_vpn.tunel_interface())
     print(new_vpn.static_route())
     print(new_vpn.prefix_list())
+    print(new_vpn.source_pool())
+    print(new_vpn.outbound_nat())
     #new_vpn.outbound_nat()
     #new_vpn.inbound_nat()
 
