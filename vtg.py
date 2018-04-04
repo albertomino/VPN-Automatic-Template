@@ -3,7 +3,7 @@ import ipaddress
 
 
 class vpn:
-    def __init__(self, name, key, peer, ti, remote_enc_domains, source_enc_domain, local_sources, dports):
+    def __init__(self, name, key, peer, ti, remote_enc_domains, source_enc_domain, local_sources, dports, local_server, lports):
         self.name = str(name)
         self.key = str(key)
         self.peer = str(peer)
@@ -11,7 +11,10 @@ class vpn:
         self.remote_enc_domains = remote_enc_domains
         self.source_enc_domain = source_enc_domain
         self.local_sources = local_sources
+        self.local_servers = local_server
         self.dports = dports
+        self.lports = lports
+
         #self.dnat = dict(dnat)
 
 
@@ -101,17 +104,14 @@ class vpn:
 #OUTBOUND TRAFFIC FROM MELI TO REMOTE-ENDPOINTS:
 
     def source_pool(self):
-        #source_pools = []
-        #source_pools.append('set security nat source pool SOURCE-POOL-%s_%s address %s' % (self.name, self.source_enc_domain, source_enc_domain))
-        spools = 'set security nat source pool SOURCE-POOL-%s_%s address %s' % (self.name, self.source_enc_domain, self.source_enc_domain)
-        #for prefixes in source_pools: spools = spools + '\n' + prefixes
+        spools = '\nset security nat source pool SOURCE-POOL-%s_%s address %s' % (self.name, self.source_enc_domain, self.source_enc_domain)
         self.snat_pool_name = 'SOURCE-POOL-%s_%s' % (self.name, self.source_enc_domain)
         return spools
 
     def outbound_nat(self):
         lsources = []
         rendpoints = []
-        dports = []
+        self.dports = []
         for ip in self.local_sources: lsources.append('set security nat source rule-set NAT_SRC_VPN rule SNAT-VPN-%s match source-address %s' % (self.name, ipaddress.ip_network(ip)))
         for ip in self.remote_enc_domains: rendpoints.append('set security nat source rule-set NAT_SRC_VPN rule SNAT-VPN-%s match destination-address %s' % (self.name, ipaddress.ip_network(ip)))
         for port in self.dports: dports.append('set security nat source rule-set NAT_SRC_VPN rule SNAT-VPN-%s match destination-port %s' % (self.name, port))
@@ -119,33 +119,24 @@ class vpn:
         for sources in lsources: outbound_nat = outbound_nat + '\n' + sources
         for rendpoint in rendpoints: outbound_nat = outbound_nat + '\n' + rendpoint
         for dport in dports: outbound_nat = outbound_nat + '\n' + dport
-        outbound_nat = outbound_nat + '\n' + 'set security nat source rule-set NAT_SRC_VPN rule SNAT-VPN-%s then source-nat pool %s' % (self.name, self.snat_pool_name)
+        outbound_nat = outbound_nat + '\n' + 'set security nat source rule-set NAT_SRC_VPN rule SNAT-VPN-%s then source-nat pool %s \n' % (self.name, self.snat_pool_name)
         return outbound_nat
-
-
-    #set security nat source pool SITE-A_Pool_TEST address 192.168.0.30/32
-    #set security nat source pool SITE-A_Pool_PROD address 192.168.0.31/32
-    #set security nat source rule-set NAT_SRC_VPN rule CLIENTE-SITE-A-TEST_NAT match source-address  10.10.52.0/23 (SERVER O RED ORIGEN MELI)
-    #set security nat source rule-set NAT_SRC_VPN rule CLIENTE-SITE-A-TEST_NAT match destination-address 192.168.2.30/32 (ENDPOINT REAL DEL PROVEEDOR, DOMINIO DE ENCRIPTACION)
-    #set security nat source rule-set NAT_SRC_VPN rule CLIENTE-SITE-A-TEST_NAT match source-address 192.0.0.0/16
-    #set security nat source rule-set NAT_SRC_VPN rule CLIENTE-SITE-A-TEST_NAT match destination-port 443
-    #set security nat source rule-set NAT_SRC_VPN rule CLIENTE-SITE-A-TEST_NAT match destination-port 80
-    #set security nat source rule-set NAT_SRC_VPN rule CLIENTE-SITE-A-TEST_NAT then source-nat pool SITE-A_Pool_TEST (SOURCE IP DEL DOMINIO DE ENCRIPTACION)
-
-    #set security nat source rule-set NAT_SRC_VPN rule SITE-A-PROD_NAT match source-address  10.75.52.0/23 (SERVER O RED ORIGEN MELI)
-    #set security nat source rule-set NAT_SRC_VPN rule SITE-A-TEST_NAT match source-address 192.0.0.0/16
-    #set security nat source rule-set NAT_SRC_VPN rule SITE-A-PROD_NAT match destination-address 192.168.2.31/32 (ENDPOINT REAL DEL PROVEEDOR, DOMINIO DE ENCRIPTACION)
-    #set security nat source rule-set NAT_SRC_VPN rule SITE-A-PROD_NAT match destination-port 443
-    #set security nat source rule-set NAT_SRC_VPN rule SITE-A-PROD_NAT match destination-port 80
-    #set security nat source rule-set NAT_SRC_VPN rule SITE-A-PROD_NAT then source-nat pool SITE-A_Pool_PROD (SOURCE IP DEL DOMINIO DE ENCRIPTACION)
 
 
 #INBOUND TRAFFIC FROM REMOTE ENDPOINTS:
 
-    #def inbound_nat(self):
-    #    for k,v in self.dnat:
-    #        vpn_dnat = '' +\
-    #        '\nset security nat destination pool %s-TEST_DNAT-POOL address %s' %  (self.name, v)
+    def destination_pool(self):
+        dpool = '\nset security nat destination pool DESTINATION-POOL-%s_%s address %s' % (self.name, self.local_servers, self.local_servers)
+        self.dnat_pool_name = 'DESTINATION-POOL-%s_%s' % (self.name, self.local_server)
+        return dpool
+
+    def inbound_nat(self):
+        inbound_nat = '\nset security nat destination rule-set NAT_DEST_VPN rule DNAT-VPN-%s match source-address %s' % (self.name, self.remote_enc_domains) +\
+        '\nset security nat destination rule-set NAT_DEST_VPN rule DNAT-VPN-%s match destination-address %s' % (self.name, self.source_enc_domain) +\
+        '\n'
+
+
+
 '''
 set security nat destination pool MISITIO-CLIENTE-SITE-A-TEST_DNAT-POOL address 10.32.177.211/32  (Falta definir el/los server/s del lado de MELI)
 set security nat destination pool MISITIO-SITE-A-PROD_DNAT-POOL address 10.32.177.211/32  (Falta definir el/los server/s del lado de MELI)
@@ -214,7 +205,7 @@ yY4bAGPGuZ67XRHz
 '''
 
 def main():
-    new_vpn = vpn(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5].split(','), sys.argv[6], sys.argv[7].split(','), sys.argv[8].split(','))
+    new_vpn = vpn(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5].split(','), sys.argv[6], sys.argv[7].split(','), sys.argv[8].split(','), sys.argv[9], sys.argv[10].split(','))
     print(new_vpn.phase_1())
     print(new_vpn.phase_2())
     print(new_vpn.ike_gateway())
@@ -224,8 +215,7 @@ def main():
     print(new_vpn.prefix_list())
     print(new_vpn.source_pool())
     print(new_vpn.outbound_nat())
-    #new_vpn.outbound_nat()
-    #new_vpn.inbound_nat()
+    print(new_vpn.inbound_nat())
 
 if __name__ == '__main__':
     main()
