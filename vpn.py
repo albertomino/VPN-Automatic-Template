@@ -68,10 +68,10 @@ class vpn:
 #VPN TUNEL DEFINITION
     def vpn(self):
         vpntunnel = '' +\
-        '\nset security ipsec vpn %s bind-interface st0.%s' % (self.name, self.ti) +\
-        '\nset security ipsec vpn %s ike gateway %s' % (self.name, self.name) +\
-        '\nset security ipsec vpn %s ike ipsec-policy %s_IPSEC_POLICY' % (self.name, self.name) +\
-        '\nset security ipsec vpn %s establish-tunnels immediately' % self.name
+        '\nset security ipsec vpn %s bind-interface st0.%s' % (self.vpn_settings["vpn"]["vpn_name"], self.vpn_settings["vpn_tunnel_definition"]["secure_interface"]) +\
+        '\nset security ipsec vpn %s ike gateway %s' % (self.vpn_settings["vpn"]["vpn_name"], self.vpn_settings["ike_gateway"]["name"]) +\
+        '\nset security ipsec vpn %s ike ipsec-policy %s_IPSEC_POLICY' % (self.vpn_settings["vpn"]["vpn_name"], self.vpn_settings["vpn"]["vpn_name"]) +\
+        '\nset security ipsec vpn %s establish-tunnels immediately' % self.vpn_settings["vpn"]["vpn_name"]
 
         return vpntunnel
 
@@ -79,9 +79,9 @@ class vpn:
 #INTERFACE TUNEL DEFINITION
     def tunel_interface(self):
         ti = '' +\
-        '\nset interfaces st0 unit %s description \"VPN %s\"' % (self.ti, self.name) +\
-        '\nset interfaces st0 unit %s family inet mtu 1436' % self.ti +\
-        '\nset security zones security-zone DMZ_VPN interfaces st0.%s' % self.ti
+        '\nset interfaces st0 unit %s description \"VPN %s\"' % (self.vpn_settings["vpn_tunnel_definition"]["secure_interface"], self.vpn_settings["vpn"]["vpn_name"]) +\
+        '\nset interfaces st0 unit %s family inet mtu 1436' % self.vpn_settings["vpn_tunnel_definition"]["secure_interface"] +\
+        '\nset security zones security-zone DMZ_VPN interfaces st0.%s' % self.vpn_settings["vpn_tunnel_definition"]["secure_interface"]
 
         return ti
 
@@ -90,17 +90,16 @@ class vpn:
     def static_route(self):
         comando = ""
         for ip in self.vpn_settings["encryption-domains"]["remote"]:
-            comando = comando + "\n" + 'set routing-options static route %s next-hop st0.%s' % (ip.get("PROD") or ip.get("DESA"), self.vpn_settings["vpn_tunnel_definition"]["secure_interface"])
+            comando = comando + "\n" + 'set routing-options static route %s next-hop st0.%s' % (ip.get("PROD") or ip.get("DESA"),
+            self.vpn_settings["vpn_tunnel_definition"]["secure_interface"])
         return comando
 
 
 #MODIFYING PREFIX-LIST TO PROCESS THE NEW VPN TRAFFIC
     def prefix_list(self):
-        #epoints = []
-        #for ip in self.remote_enc_domain: epoints.append('set policy-options prefix-list PBR_Inet-0 %s' % #ipaddress.ip_network(ip))
-        pl = '\nset policy-options prefix-list PBR_Inet-0 %s' % self.remote_enc_domain
-        #for prefixes in epoints: pl = pl + '\n' + prefixes
-        return pl
+        comando = ""
+        for ip in self.vpn_settings["encryption-domains"]["remote"]: comando = comando + "\n" + 'set policy-options prefix-list PBR_Inet-0 %s' % (ip.get("PROD") or ip.get("DESA"))
+        return comando
 
 
 #NATs
