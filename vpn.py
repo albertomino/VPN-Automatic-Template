@@ -101,7 +101,7 @@ class vpn:
     def static_route(self):
         comando = ""
         for ip in self.encryption_domains["remote"]:
-            comando = comando + "\n" + "set routing-options static route %s next-hop st0.%s" % (ip.get("PROD") or ip.get("DESA"),
+            comando = comando + "\n" + "set routing-options static route %s next-hop st0.%s" % (ip.get("net"),
             self.vpn_tunnel_definition["secure_interface"])
         return comando
 
@@ -109,7 +109,7 @@ class vpn:
 #MODIFYING PREFIX-LIST TO PROCESS THE NEW VPN TRAFFIC
     def prefix_list(self):
         comando = ""
-        for ip in self.encryption_domains["remote"]: comando = comando + "\n" + "set policy-options prefix-list PBR_Inet-0 %s" % (ip.get("PROD") or ip.get("DESA"))
+        for ip in self.encryption_domains["remote"]: comando = comando + "\n" + "set policy-options prefix-list PBR_Inet-0 %s" % ip.get("net")
         return comando
 
 
@@ -119,10 +119,11 @@ class vpn:
 
     def source_pool(self):
         snat_pools = ""
-        for ip in self.nat_encryption_domains["local"]:
-            snat_pools = snat_pools + "\nset security nat source pool %s_%s_%s address %s" % (self.vpn_general["name"], ip.items(), ip.get("PROD") or ip.get("DESA"), \
-            ip.get("PROD") or ip.get("DESA"))
-        #self.snat_pool_name = "SOURCE-POOL-%s_%s" % (self.vpn_name, self.source_enc_domain)
+        for ip in self.encryption_domains["local"]:
+            snat_pools = snat_pools + "\nset security nat source pool %s_%s_%s address %s" % (self.vpn_general["name"], ip.get("env"), ip.get("net"), \
+            ip.get("net"))
+        self.snat_pool_prod = "%s_%s_%s" % (self.vpn_general["name"], self.encryption_domains["local"][0]["env"], self.encryption_domains["local"][0]["net"])
+        self.snat_pool_desa = "%s_%s_%s" % (self.vpn_general["name"], self.encryption_domains["local"][1]["env"], self.encryption_domains["local"][1]["net"])
         return snat_pools
 
     def outbound_nat(self):
