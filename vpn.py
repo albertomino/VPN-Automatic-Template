@@ -17,6 +17,8 @@ class vpn:
         self.vpn_tunnel_definition = vpn_settings["vpn_tunnel_definition"]
         self.encryption_domains = vpn_settings["encryption_domains"]
         self.nat_encryption_domains = vpn_settings["nat_encryption_domains"]
+        self.snat_pools = vpn_settings["snat_pools"]["pools"]
+        self.ports = vpn_settings["ports"]
         #self.vpn_name = vpn_settings["vpn"]["vpn_name"]
         #self.key = vpn_settings["ike_policy"]["pre_shared_key"]
         #self.peer = vpn_settings["ike_gateway"]["address"]
@@ -127,19 +129,31 @@ class vpn:
         return snat_pools
 
     def outbound_nat(self):
-        lsources = []
-        rendpoints = []
-        self.dports = []
-        for ip in self.local_sources: lsources.append("set security nat source rule-set NAT_SRC_VPN rule SNAT-VPN-%s match source-address %s" % (self.vpn_name, ipaddress.ip_network(ip)))
+        lsources = ""
+        rendpoints = {}
+
+        for env in self.snat_pools:
+            for pool in env["nets"]: lsources = lsources + "\nset security nat source rule-set NAT_SRC_VPN rule %s-%s match source-address %s" % \
+        (self.vpn_general["name"], env["env"], pool)
+
+        #for env in self.encryption_domains["remote"]: lsources[env["env"]] = "set security nat source rule-set NAT_SRC_VPN rule %s-%s match source-address %s" % \
+        #(self.vpn_general["name"], env["env"], env["net"])
+        #rendpoints[env["env"]] = "set security nat source rule-set NAT_SRC_VPN rule %s-%s match destination-address %s" % (self.vpn_general["name"], env["env"], env["net"])
+
+
+        #for ip in self.local_sources: lsources.append("set security nat source rule-set NAT_SRC_VPN rule SNAT-VPN-%s match source-address %s" % (self.vpn_name, ipaddress.ip_network(ip)))
         #for ip in self.remote_enc_domain: rendpoints.append("set security nat source rule-set NAT_SRC_VPN rule SNAT-VPN-%s match #destination-address %s" % (self.vpn_name, ipaddress.ip_network(ip)))
-        for port in self.dports: dports.append("set security nat source rule-set NAT_SRC_VPN rule SNAT-VPN-%s match destination-port %s" % (self.vpn_name, port))
-        outbound_nat = ""
-        for sources in lsources: outbound_nat = outbound_nat + "\n" + sources
+
+        ##for port in self.dports: dports.append("set security nat source rule-set NAT_SRC_VPN rule SNAT-VPN-%s match destination-port %s" % (self.vpn_general["name"], port))
+        ##outbound_nat = ""
+        ##for sources in lsources: outbound_nat = outbound_nat + "\n" + sources
+
         #for rendpoint in rendpoints: outbound_nat = outbound_nat + "\n" + rendpoint
-        outbound_nat = outbound_nat + "\nset security nat source rule-set NAT_SRC_VPN rule SNAT-VPN-%s match destination-address %s" % (self.vpn_name, self.remote_enc_domain)
-        for dport in self.dports: outbound_nat = outbound_nat + "\n" + dport
-        outbound_nat = outbound_nat + "\n" + "set security nat source rule-set NAT_SRC_VPN rule SNAT-VPN-%s then source-nat pool %s \n" % (self.vpn_name, self.snat_pool_name)
-        return outbound_nat
+
+        ##outbound_nat = outbound_nat + "\nset security nat source rule-set NAT_SRC_VPN rule SNAT-VPN-%s match destination-address %s" % (self.vpn_general["name"], self.remote_enc_domain)
+        ##for dport in self.dports: outbound_nat = outbound_nat + "\n" + dport
+        ##outbound_nat = outbound_nat + "\n" + "set security nat source rule-set NAT_SRC_VPN rule SNAT-VPN-%s then source-nat pool %s \n" % (self.vpn_general["name"], self.snat_pool_name)
+        ##return outbound_nat
 
     def destination_pool(self):
         dpool = "set security nat destination pool DNAT-POOL-%s_%s address %s" % (self.vpn_name, self.local_server, self.local_server)
@@ -223,15 +237,15 @@ def main():
         return
 
     new_vpn = vpn(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5], sys.argv[6], sys.argv[7].split(","), sys.argv[8].split(","), sys.argv[9], sys.argv[10].split(","), vpn_config)
-    print(new_vpn.phase_1())
-    print(new_vpn.phase_2())
-    print(new_vpn.gateway())
-    print(new_vpn.vpn())
-    print(new_vpn.tunel_interface())
-    print(new_vpn.static_route())
-    print(new_vpn.prefix_list())
+    #print(new_vpn.phase_1())
+    #print(new_vpn.phase_2())
+    #print(new_vpn.gateway())
+    #print(new_vpn.vpn())
+    #print(new_vpn.tunel_interface())
+    #print(new_vpn.static_route())
+    #print(new_vpn.prefix_list())
     print(new_vpn.source_pool())
-    #print(new_vpn.outbound_nat())
+    print(new_vpn.outbound_nat())
     #print(new_vpn.destination_pool())
     #print(new_vpn.destination_nat())
     #print(new_vpn.inbound_source_pool())
