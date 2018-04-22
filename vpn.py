@@ -117,43 +117,40 @@ class vpn:
 
 #NATs
 
-#OUTBOUND TRAFFIC FROM MELI TO REMOTE-ENDPOINTS:
+##OUTBOUND TRAFFIC FROM MELI TO REMOTE-ENDPOINTS:
 
     def source_pool(self):
         snat_pools = ""
+        self.snat_pools_names = {}
         for ip in self.encryption_domains["local"]:
             snat_pools = snat_pools + "\nset security nat source pool %s_%s_%s address %s" % (self.vpn_general["name"], ip.get("env"), ip.get("net"), \
             ip.get("net"))
-        self.snat_pool_prod = "%s_%s_%s" % (self.vpn_general["name"], self.encryption_domains["local"][0]["env"], self.encryption_domains["local"][0]["net"])
-        self.snat_pool_desa = "%s_%s_%s" % (self.vpn_general["name"], self.encryption_domains["local"][1]["env"], self.encryption_domains["local"][1]["net"])
+            self.snat_pools_names[ip.get("env")] = "%s_%s_%s" % (self.vpn_general["name"], ip.get("env"), ip.get("net"))
+
         return snat_pools
 
     def outbound_nat(self):
-        lsources = ""
-        rendpoints = {}
+        command = ""
 
         for env in self.snat_pools:
-            for pool in env["nets"]: lsources = lsources + "\nset security nat source rule-set NAT_SRC_VPN rule %s-%s match source-address %s" % \
-        (self.vpn_general["name"], env["env"], pool)
+            for pool in env["nets"]: command = command + "\nset security nat source rule-set NAT_SRC_VPN rule %s-%s match source-address %s" % \
+            (self.vpn_general["name"], env["env"], pool)
 
-        #for env in self.encryption_domains["remote"]: lsources[env["env"]] = "set security nat source rule-set NAT_SRC_VPN rule %s-%s match source-address %s" % \
-        #(self.vpn_general["name"], env["env"], env["net"])
-        #rendpoints[env["env"]] = "set security nat source rule-set NAT_SRC_VPN rule %s-%s match destination-address %s" % (self.vpn_general["name"], env["env"], env["net"])
+        for env in self.nat_encryption_domains["remote"]:
+             command = command + "\nset security nat source rule-set NAT_SRC_VPN rule %s-%s match destination-address %s" % \
+             (self.vpn_general["name"], env["env"], env["net"])
+
+        for env in self.ports["dports"]:
+            command = command + "\nset security nat source rule-set NAT_SRC_VPN rule %s-%s match destination-port %s" % \
+            (self.vpn_general["name"], env["env"], env["port"])
+
+        for env in self.encryption_domains["local"]: command = command + "\nset security nat source rule-set NAT_SRC_VPN rule %s-%s then source-nat pool %s" % \
+            (self.vpn_general["name"], env["env"], self.snat_pools_names[env["env"]])
+
+        return command
 
 
-        #for ip in self.local_sources: lsources.append("set security nat source rule-set NAT_SRC_VPN rule SNAT-VPN-%s match source-address %s" % (self.vpn_name, ipaddress.ip_network(ip)))
-        #for ip in self.remote_enc_domain: rendpoints.append("set security nat source rule-set NAT_SRC_VPN rule SNAT-VPN-%s match #destination-address %s" % (self.vpn_name, ipaddress.ip_network(ip)))
-
-        ##for port in self.dports: dports.append("set security nat source rule-set NAT_SRC_VPN rule SNAT-VPN-%s match destination-port %s" % (self.vpn_general["name"], port))
-        ##outbound_nat = ""
-        ##for sources in lsources: outbound_nat = outbound_nat + "\n" + sources
-
-        #for rendpoint in rendpoints: outbound_nat = outbound_nat + "\n" + rendpoint
-
-        ##outbound_nat = outbound_nat + "\nset security nat source rule-set NAT_SRC_VPN rule SNAT-VPN-%s match destination-address %s" % (self.vpn_general["name"], self.remote_enc_domain)
-        ##for dport in self.dports: outbound_nat = outbound_nat + "\n" + dport
-        ##outbound_nat = outbound_nat + "\n" + "set security nat source rule-set NAT_SRC_VPN rule SNAT-VPN-%s then source-nat pool %s \n" % (self.vpn_general["name"], self.snat_pool_name)
-        ##return outbound_nat
+##INBOUND TRAFIC FROM CLIENT TO MELI:
 
     def destination_pool(self):
         dpool = "set security nat destination pool DNAT-POOL-%s_%s address %s" % (self.vpn_name, self.local_server, self.local_server)
