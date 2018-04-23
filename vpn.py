@@ -4,8 +4,7 @@ import json
 
 
 class vpn:
-    def __init__(self, name, key, peer, ti, remote_enc_domain, source_enc_domain, local_sources, dports, local_server, lports, vpn_settings):
-    #def __init__(self, settings):
+    def __init__(self, vpn_settings):
         #self.vpn_settings = json.loads(vpn_settings)
         self.vpn_general = vpn_settings["vpn"]
         self.ike_proposal = vpn_settings["ike_proposal"]
@@ -20,19 +19,6 @@ class vpn:
         self.snat_pools = vpn_settings["snat_pools"]["pools"]
         self.ports = vpn_settings["ports"]
         self.local_server = vpn_settings["local_server"]
-        #self.vpn_name = vpn_settings["vpn"]["vpn_name"]
-        #self.key = vpn_settings["ike_policy"]["pre_shared_key"]
-        #self.peer = vpn_settings["ike_gateway"]["address"]
-        #self.si = vpn_settings["vpn_tunnel_definition"]["secure_interface"]
-        #self.ike_proposal_name = vpn_settings["ike_proposal"]["name"]
-        #self.ipsec_policy_name = vpn_settings["ipsec_policy"]["name"]
-        #self.remote_enc_domains = vpn_settings["encryption_domains"]["remote"]
-        #self.remote_enc_domain = ipaddress.ip_network(remote_enc_domain)
-        #self.source_enc_domain = source_enc_domain
-        #self.local_sources = local_sources
-        #self.local_server = local_server
-        #self.dports = dports
-        #self.lports = lports
 
 
 #PHASE-1
@@ -122,7 +108,9 @@ class vpn:
 
     def source_pool(self):
         snat_pools = ""
+
         self.snat_pools_names = {}
+
         for ip in self.encryption_domains["local"]:
             snat_pools = snat_pools + "\nset security nat source pool %s_%s_%s address %s" % (self.vpn_general["name"], ip.get("env"), ip.get("net"), \
             ip.get("net"))
@@ -155,18 +143,17 @@ class vpn:
 
     def destination_pool(self):
         dpools = ""
+
         self.dnat_pool_names = {}
+
         for env in self.local_server:
             dpools = dpools + "\nset security nat destination pool %s_%s_%s address %s" % \
             (self.vpn_general["name"], env["env"], env["server"], env["server"])
             self.dnat_pool_names[env["env"]] = "%s_%s_%s" % (self.vpn_general["name"], env["env"], env["server"])
-        #"set security nat destination pool DNAT-POOL-%s_%s address %s" % (self.vpn_general["name"], self.local_server, self.local_server)
-        #self.dnat_pool_name = "DNAT-POOL-%s_%s" % (self.vpn_name, self.local_server)
+
         return dpools
 
     def destination_nat(self):
-        #lports = []
-
         command = ""
 
         for env in self.encryption_domains["remote"]:
@@ -185,30 +172,41 @@ class vpn:
             command = command + "\nset security nat destination rule-set NAT_DEST_VPN rule %s_%s then destination-nat pool %s" % \
             (self.vpn_general["name"], env["env"], self.dnat_pool_names[env["env"]])
 
-        #for port in self.lports: lports.append("set security nat destination rule-set NAT_DEST_VPN rule DNAT-VPN-%s match destination-port %s" % (self.vpn_name, port))
-        #destination_nat = "\nset security nat destination rule-set NAT_DEST_VPN rule DNAT-VPN-%s match source-address %s" % (self.vpn_name, self.remote_enc_domain) +\
-        #"\nset security nat destination rule-set NAT_DEST_VPN rule DNAT-VPN-%s match destination-address %s" % (self.vpn_name, self.source_enc_domain)
-        #for lp in lports: destination_nat = destination_nat + "\n" + lp
-        #destination_nat = destination_nat + "\nset security nat destination rule-set NAT_DEST_VPN rule DNAT-VPN-%s then destination-nat pool %s" % (self.vpn_name, self.dnat_pool_name)
-
         return command
 
 
-#SOURCE NAT FOR INBOUND TRAFFIC
+##SOURCE NAT FOR INBOUND TRAFFIC
 
     def inbound_source_pool(self):
-        inbound_spools = "\nset security nat source pool SOURCE-POOL-%s_%s address %s" % (self.vpn_name, self.source_enc_domain, self.source_enc_domain)
-        self.inbound_snat_pool_name = "SOURCE-POOL-%s_%s" % (self.vpn_name, self.source_enc_domain)
+        inbound_spools = ""
+
+        self.inbound_spools_names = {}
+
+        for env in self.nat_encryption_domains["remote"]:
+            inbound_spools = inbound_spools + "\nset security nat source pool %s_%s_%s address %s" % (self.vpn_general["name"], env["env"], env["net"], env["net"])
+            self.inbound_spools_names[env["env"]] = "%s_%s_%s" % (self.vpn_general["name"], env["env"], env["net"])
+
         return inbound_spools
 
     def inbound_nat(self):
-        inbound_nat = "\nset security nat source rule-set SNAT_VPN_TO_B2B rule SNAT_%s match source-address %s" % (self.vpn_name, self.remote_enc_domain) +\
-        "\nset security nat source rule-set SNAT_VPN_TO_B2B rule SNAT_%s match destination-address %s" % (self.vpn_name, self.local_server)
-        local_ports = []
-        for port in self.lports: local_ports.append("set security nat source rule-set SNAT_VPN_TO_B2B rule SNAT_%s match destination-port %s" % (self.vpn_name, port))
-        for sport in local_ports: inbound_nat = inbound_nat + "\n" + sport
-        inbound_nat = inbound_nat + "\n" + "set security nat source rule-set SNAT_VPN_TO_B2B rule SNAT-%s then source-nat pool %s \n" % (self.vpn_name, self.inbound_snat_pool_name)
-        return inbound_nat
+        command = ""
+        for env in self.encryption_domains["remote"]:
+            command = command + "\nset security nat source rule-set SNAT_VPN_TO_B2B rule %s_%s match source-address %s" % \
+            (self.vpn_general["name"], env["env"], env["net"])
+
+        for env in self.local_server:
+            command = command + "\nset security nat source rule-set SNAT_VPN_TO_B2B rule %s_%s match destination-address %s" % \
+            (self.vpn_general["name"], env["env"], env["server"])
+
+        for env in self.ports["lports"]:
+            command = command + "\nset security nat source rule-set SNAT_VPN_TO_B2B rule %s_%s match destination-port %s" % \
+            (self.vpn_general["name"], env["env"], env["port"])
+
+        for env in self.nat_encryption_domains["remote"]:
+            command = command + "\nset security nat source rule-set SNAT_VPN_TO_B2B rule %s_%s then source-nat pool %s" % \
+            (self.vpn_general["name"], env["env"], self.inbound_spools_names[env["env"]])
+
+        return command
 """
 
 POLICIES
@@ -260,20 +258,20 @@ def main():
         print("config.json doesn't exist")
         return
 
-    new_vpn = vpn(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5], sys.argv[6], sys.argv[7].split(","), sys.argv[8].split(","), sys.argv[9], sys.argv[10].split(","), vpn_config)
-    #print(new_vpn.phase_1())
-    #print(new_vpn.phase_2())
-    #print(new_vpn.gateway())
-    #print(new_vpn.vpn())
-    #print(new_vpn.tunel_interface())
-    #print(new_vpn.static_route())
-    #print(new_vpn.prefix_list())
+    new_vpn = vpn(vpn_config)
+    print(new_vpn.phase_1())
+    print(new_vpn.phase_2())
+    print(new_vpn.gateway())
+    print(new_vpn.vpn())
+    print(new_vpn.tunel_interface())
+    print(new_vpn.static_route())
+    print(new_vpn.prefix_list())
     print(new_vpn.source_pool())
     print(new_vpn.outbound_nat())
     print(new_vpn.destination_pool())
     print(new_vpn.destination_nat())
-    #print(new_vpn.inbound_source_pool())
-    #print(new_vpn.inbound_nat())
+    print(new_vpn.inbound_source_pool())
+    print(new_vpn.inbound_nat())
 
 if __name__ == "__main__":
     main()
