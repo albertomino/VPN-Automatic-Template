@@ -19,6 +19,7 @@ class vpn:
         self.nat_encryption_domains = vpn_settings["nat_encryption_domains"]
         self.snat_pools = vpn_settings["snat_pools"]["pools"]
         self.ports = vpn_settings["ports"]
+        self.local_server = vpn_settings["local_server"]
         #self.vpn_name = vpn_settings["vpn"]["vpn_name"]
         #self.key = vpn_settings["ike_policy"]["pre_shared_key"]
         #self.peer = vpn_settings["ike_gateway"]["address"]
@@ -153,18 +154,44 @@ class vpn:
 ##INBOUND TRAFIC FROM CLIENT TO MELI:
 
     def destination_pool(self):
-        dpool = "set security nat destination pool DNAT-POOL-%s_%s address %s" % (self.vpn_name, self.local_server, self.local_server)
-        self.dnat_pool_name = "DNAT-POOL-%s_%s" % (self.vpn_name, self.local_server)
-        return dpool
+        dpools = ""
+        self.dnat_pool_names = {}
+        for env in self.local_server:
+            dpools = dpools + "\nset security nat destination pool %s_%s_%s address %s" % \
+            (self.vpn_general["name"], env["env"], env["server"], env["server"])
+            self.dnat_pool_names[env["env"]] = "%s_%s_%s" % (self.vpn_general["name"], env["env"], env["server"])
+        #"set security nat destination pool DNAT-POOL-%s_%s address %s" % (self.vpn_general["name"], self.local_server, self.local_server)
+        #self.dnat_pool_name = "DNAT-POOL-%s_%s" % (self.vpn_name, self.local_server)
+        return dpools
 
     def destination_nat(self):
-        lports = []
-        for port in self.lports: lports.append("set security nat destination rule-set NAT_DEST_VPN rule DNAT-VPN-%s match destination-port %s" % (self.vpn_name, port))
-        destination_nat = "\nset security nat destination rule-set NAT_DEST_VPN rule DNAT-VPN-%s match source-address %s" % (self.vpn_name, self.remote_enc_domain) +\
-        "\nset security nat destination rule-set NAT_DEST_VPN rule DNAT-VPN-%s match destination-address %s" % (self.vpn_name, self.source_enc_domain)
-        for lp in lports: destination_nat = destination_nat + "\n" + lp
-        destination_nat = destination_nat + "\nset security nat destination rule-set NAT_DEST_VPN rule DNAT-VPN-%s then destination-nat pool %s" % (self.vpn_name, self.dnat_pool_name)
-        return destination_nat
+        #lports = []
+
+        command = ""
+
+        for env in self.encryption_domains["remote"]:
+            command = command + "\nset security nat destination rule-set NAT_DEST_VPN rule %s_%s match source-address %s" % \
+            (self.vpn_general["name"], env["env"], env["net"])
+
+        for env in self.encryption_domains["local"]:
+            command = command + "\nset security nat destination rule-set NAT_DEST_VPN rule %s_%s match destination-address %s" % \
+            (self.vpn_general["name"], env["env"], env["net"])
+
+        for env in self.ports["lports"]:
+            command = command + "\nset security nat destination rule-set NAT_DEST_VPN rule %s_%s match destination-port %s" % \
+            (self.vpn_general["name"], env["env"], env["port"])
+
+        for env in self.local_server:
+            command = command + "\nset security nat destination rule-set NAT_DEST_VPN rule %s_%s then destination-nat pool %s" % \
+            (self.vpn_general["name"], env["env"], self.dnat_pool_names[env["env"]])
+
+        #for port in self.lports: lports.append("set security nat destination rule-set NAT_DEST_VPN rule DNAT-VPN-%s match destination-port %s" % (self.vpn_name, port))
+        #destination_nat = "\nset security nat destination rule-set NAT_DEST_VPN rule DNAT-VPN-%s match source-address %s" % (self.vpn_name, self.remote_enc_domain) +\
+        #"\nset security nat destination rule-set NAT_DEST_VPN rule DNAT-VPN-%s match destination-address %s" % (self.vpn_name, self.source_enc_domain)
+        #for lp in lports: destination_nat = destination_nat + "\n" + lp
+        #destination_nat = destination_nat + "\nset security nat destination rule-set NAT_DEST_VPN rule DNAT-VPN-%s then destination-nat pool %s" % (self.vpn_name, self.dnat_pool_name)
+
+        return command
 
 
 #SOURCE NAT FOR INBOUND TRAFFIC
@@ -243,8 +270,8 @@ def main():
     #print(new_vpn.prefix_list())
     print(new_vpn.source_pool())
     print(new_vpn.outbound_nat())
-    #print(new_vpn.destination_pool())
-    #print(new_vpn.destination_nat())
+    print(new_vpn.destination_pool())
+    print(new_vpn.destination_nat())
     #print(new_vpn.inbound_source_pool())
     #print(new_vpn.inbound_nat())
 
