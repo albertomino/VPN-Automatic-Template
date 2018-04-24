@@ -248,28 +248,78 @@ class vpn:
 
 ##OUTBOUND TRAFFIC FROM MELI, FROM DMZ_B2B TO DMZ_VPN
 
-    #class policy:
-    #    def __init__(self, settings):
-    #        self.remote_applications = settings["ports"]["dports"]
-    #        self.sources= settings["snat_pools"]["pools"]
-    #        self.destinations = settings[""] --> Quede acá!
-    ##        self.ike_gateway = settings["ike_gateway"]
-    ##        self.ike_gateway = settings["ike_gateway"]
-    ##        self.ipsec_proposal = settings["ipsec_proposal"]
-    ##        self.ipsec_policy = settings["ipsec_policy"]
-    ##        self.vpn_tunnel_definition = settings["vpn_tunnel_definition"]
-    ##        self.encryption_domains = settings["encryption_domains"]
-    ##        self.nat_encryption_domains = settings["nat_encryption_domains"]
-    ##        self.snat_pools = settings["snat_pools"]["pools"]
-    ##        self.ports = settings["ports"]
-    ##        self.local_server = settings["local_server"]
+class policy:
+    def __init__(self, settings):
+        self.vpn_general = settings["vpn"]
+        self.encryption_domains = settings["encryption_domains"]
+        self.nat_encryption_domains = settings["nat_encryption_domains"]
+        self.snat_pools = settings["snat_pools"]["pools"]
+        self.ports = settings["ports"]
+        self.local_server = settings["local_server"]
 
-    #outbound_sec_policy(self):
-    #    command = ""
+    def applications(self):
+        command = ""
 
-    #    for
+        self.applications_names_local = {}
+
+        self.applications_names_remote = {}
+
+        for app in self.ports["lports"]:
+            command = command + "\nset applications application TCP-%s protocol tcp" % app["port"]
+            command = command + "\nset applications application TCP-%s destination-port %s" % (app["port"], app["port"])
+            self.applications_names_local[app["env"]] = "TCP-%s" % app["port"]
+
+        for app in self.ports["dports"]:
+            command = command + "\nset applications application TCP-%s protocol tcp" % app["port"]
+            command = command + "\nset applications application TCP-%s destination-port %s" % (app["port"], app["port"])
+            self.applications_names_remote[app["env"]] = "TCP-%s" % app["port"]
+
+        return command
+
+    def address_book(self):
+        command = ""
+
+        self.address_book_dmz_b2b = {}
+
+        self.address_book_dmz_b2b_server = {}
+
+        self.address_book_dmz_vpn = {}
+
+        for env in self.snat_pools:
+            for source in env["nets"]:
+                command = command + "\nset security zones security-zone DMZ_B2B address-book address %s_%s_%s %s" % \
+                (env["name"], env["env"], source, source)
+                self.address_book_dmz_b2b[env["env"]] = "%s_%s_%s" % (env["name"], env["env"], source)
+
+        for env in self.local_server:
+            command = command + "\nset security zones security-zone DMZ_B2B address-book address %s_%s_%s %s" % \
+            (env["name"], env["env"], env["server"], env["server"])
+            self.address_book_dmz_b2b_server[env["env"]] = "%s_%s_%s" % (env["name"], env["env"], env["server"])
+
+        for env in self.encryption_domains["remote"]:
+            command = command + "\nset security zones security-zone DMZ_VPN address-book address %s_%s_%s %s" % \
+            (self.vpn_general["name"], env["env"], env["net"], env["net"])
+            self.address_book_dmz_vpn[env["env"]] = "%s_%s_%s" % (self.vpn_general["name"], env["env"], env["net"])
+
+        return command
+
+    def outbound(self):
+        command = ""
+
+        for env in self.snat_pools:
+            for source in env["nets"]:
+                command = command + "\nset security policies from-zone DMZ_B2B to-zone DMZ_VPN policy ACCESS_TO_%s_%s_SERVERS match source-address %s" % \
+                (self.vpn_general["name"], env["env"], source)
+
+        return command
+
+    def inbound(self):
+        pass
 
 '''
+set applications application TCP-7130 protocol tcp
+set applications application TCP-7130 destination-port 7130
+
 set security zones security-zone DMZ_B2B address-book address INSTORE-API-APP_10.X.X.0/23 10.X.X.0/23
 
 set security zones security-zone DMZ_VPN address-book address CLIENTE-SITE-A-SERVER-TEST_172.X.X.77 172.X.X.77/32
@@ -313,6 +363,7 @@ def main():
         return
 
     new_vpn = vpn(settings)
+    new_policy = policy(settings)
     #print(new_vpn.phase_1())
     #print(new_vpn.phase_2())
     #print(new_vpn.gateway())
@@ -320,15 +371,17 @@ def main():
     #print(new_vpn.tunel_interface())
     #print(new_vpn.static_route())
     #print(new_vpn.prefix_list())
-    print(new_vpn.outbound_dnat_pool())
-    print(new_vpn.outbound_dnat())
-    print(new_vpn.source_pool())
-    print(new_vpn.outbound_nat())
-    print(new_vpn.destination_pool())
-    print(new_vpn.destination_nat())
-    print(new_vpn.inbound_source_pool())
-    print(new_vpn.inbound_nat())
-    #new_policy = policy(settings)
+    #print(new_vpn.outbound_dnat_pool())
+    #print(new_vpn.outbound_dnat())
+    #print(new_vpn.source_pool())
+    #print(new_vpn.outbound_nat())
+    #print(new_vpn.destination_pool())
+    #print(new_vpn.destination_nat())
+    #print(new_vpn.inbound_source_pool())
+    #print(new_vpn.inbound_nat())
+    print(new_policy.applications())
+    print(new_policy.address_book())
+    print(new_policy.outbound())
 
 if __name__ == "__main__":
     main()
