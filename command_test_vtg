@@ -1,0 +1,16 @@
+self, name, key, peer, ti, remote_enc_domain, source_enc_domain, local_sources, dports, local_server, lports)
+
+MOVISTAR fVHGyMxC8r6CgsFU 200.106.240.1 42 200.106.240.16/32 216.33.196.30/32 10.35.33.25/32 7130 10.35.33.25/32 7130
+
+ORACLE-CLOUD-VPN LcUH2AhcjYGX96rGaAZYCYev4Ao572xhsvlauMATSM8nZZHO73pf9XPeAbWO9CaR 129.213.7.61 41 10.99.0.0/16 172.22.0.100/32 10.32.0.0/16,10.33.0.0/16,10.34.0.0/16,10.35.0.0/16,172.16.0.0/16 80,443,22 10.32.177.99 80,443
+
+
+Hacemos source NAT????
+
+
+**
+Si son nat publicos hay que usar los existentes.
+SNAT-PUBLIC-2
+SNAT-PUBLIC-1
+
+**
