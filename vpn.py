@@ -244,9 +244,6 @@ class vpn:
 
 ##POLICIES
 
-#Tener en cuenta el procesamiento de NATs para el armado de las policies.
-
-##OUTBOUND TRAFFIC FROM MELI, FROM DMZ_B2B TO DMZ_VPN
 
 class policy:
     def __init__(self, settings):
@@ -279,7 +276,7 @@ class policy:
     def address_book(self):
         command = ""
 
-        self.address_book_dmz_b2b = {}
+        self.address_book_dmz_b2b = []
 
         self.address_book_dmz_b2b_server = {}
 
@@ -289,7 +286,7 @@ class policy:
             for source in env["nets"]:
                 command = command + "\nset security zones security-zone DMZ_B2B address-book address %s_%s_%s %s" % \
                 (env["name"], env["env"], source, source)
-                self.address_book_dmz_b2b[env["env"]] = "%s_%s_%s" % (env["name"], env["env"], source)
+                self.address_book_dmz_b2b.append({env["env"] : "%s_%s_%s" % (env["name"], env["env"], source)})
 
         for env in self.local_server:
             command = command + "\nset security zones security-zone DMZ_B2B address-book address %s_%s_%s %s" % \
@@ -303,56 +300,52 @@ class policy:
 
         return command
 
+##OUTBOUND TRAFFIC FROM MELI, FROM DMZ_B2B TO DMZ_VPN.
+
     def outbound(self):
         command = ""
 
-        for env in self.snat_pools:
-            for source in env["nets"]:
+        for env in self.address_book_dmz_b2b:
+            for k, v in env.items():
                 command = command + "\nset security policies from-zone DMZ_B2B to-zone DMZ_VPN policy ACCESS_TO_%s_%s_SERVERS match source-address %s" % \
-                (self.vpn_general["name"], env["env"], source)
+                (self.vpn_general["name"], k, v)
+
+        for env in self.encryption_domains["remote"]:
+            command = command + "\nset security policies from-zone DMZ_B2B to-zone DMZ_VPN policy ACCESS_TO_%s_%s_SERVERS match destination-address %s" % \
+            (self.vpn_general["name"], env["env"], self.address_book_dmz_vpn[env["env"]])
+
+        for env in self.ports["dports"]:
+            command = command + "\nset security policies from-zone DMZ_B2B to-zone DMZ_VPN policy ACCESS_TO_%s_%s_SERVERS match application %s" % \
+            (self.vpn_general["name"], env["env"], self.applications_names_remote[env["env"]])
+
+        for env in self.encryption_domains["remote"]:
+            command = command + "\nset security policies from-zone DMZ_B2B to-zone DMZ_VPN policy ACCESS_TO_%s_%s_SERVERS then permit" % \
+            (self.vpn_general["name"], env["env"])
 
         return command
 
+##INBOUND TRAFFIC FROM PROVEEDOR, FROM DMZ_VPN TO DMZ_B2B.
+
     def inbound(self):
-        pass
+        command = ""
 
-'''
-set applications application TCP-7130 protocol tcp
-set applications application TCP-7130 destination-port 7130
+        for env in self.encryption_domains["remote"]:
+            command = command + "\nset security policies from-zone DMZ_VPN to-zone DMZ_B2B policy ACCESS_FROM_%s_%s source-address %s" % \
+            (self.vpn_general["name"], env["env"], self.address_book_dmz_vpn[env["env"]])
 
-set security zones security-zone DMZ_B2B address-book address INSTORE-API-APP_10.X.X.0/23 10.X.X.0/23
+        for env, dst in self.address_book_dmz_b2b_server.items():
+            command = command + "\nset security policies from-zone DMZ_VPN to-zone DMZ_B2B policy ACCESS_FROM_%s_%s destination-address %s" % \
+            (self.vpn_general["name"], env, dst)
 
-set security zones security-zone DMZ_VPN address-book address CLIENTE-SITE-A-SERVER-TEST_172.X.X.77 172.X.X.77/32
-set security zones security-zone DMZ_VPN address-book address CLIENTE-SITE-A-SERVER-PROD_172.X.X.78 172.X.X.78/32
+        for env in self.ports["lports"]:
+            command = command + "\nset security policies from-zone DMZ_VPN to-zone DMZ_B2B policy ACCESS_FROM_%s_%s match application %s" % \
+            (self.vpn_general["name"], env["env"], self.applications_names_local[env["env"]])
 
-set security policies from-zone DMZ_B2B to-zone DMZ_VPN policy ACCESS_TO_CLIENTE-SITE-A_SERVERS match source-address
-INSTORE-API-APP_10.X.X.0/23
-set security policies from-zone DMZ_B2B to-zone DMZ_VPN policy ACCESS_TO_CLIENTE-SITE-A_SERVERS match source-address Batmans
-set security policies from-zone DMZ_B2B to-zone DMZ_VPN policy ACCESS_TO_CLIENTE-SITE-A_SERVERS match destination-address CLIENTE-SITE-A-SERVER-TEST_172.X.X.77
-set security policies from-zone DMZ_B2B to-zone DMZ_VPN policy ACCESS_TO_CLIENTE-SITE-A_SERVERS match destination-address CLIENTE-SITE-A-SERVER-PROD_172.X.X.78
-set security policies from-zone DMZ_B2B to-zone DMZ_VPN policy ACCESS_TO_CLIENTE-SITE-A_SERVERS match application junos-http
-set security policies from-zone DMZ_B2B to-zone DMZ_VPN policy ACCESS_TO_CLIENTE-SITE-A_SERVERS match application junos-https
-set security policies from-zone DMZ_B2B to-zone DMZ_VPN policy ACCESS_TO_CLIENTE-SITE-A_SERVERS then permit
+        for env in self.local_server:
+            command = command + "\nset security policies from-zone DMZ_VPN to-zone DMZ_B2B policy ACCESS_FROM_%s_%s then permit" % (self.vpn_general["name"], env["env"])
 
+        return command
 
-INBOUND TRAFFIC FROM PROVEEDOR
-
-FROM DMZ_VPN TO DMZ_B2B
-
-set security zones security-zone DMZ_B2B address-book address CLIENTE-VIP-APP_10.X.X.21/32 10.X.X.21/32
-
-set security policies from-zone DMZ_VPN to-zone DMZ_B2B policy ACCESS_FROM_CLIENTE-SITE-A_SERVERS match source-address CLIENTE-SITE-A-SERVER-TEST_172.X.X.77
-set security policies from-zone DMZ_VPN to-zone DMZ_B2B policy ACCESS_FROM_CLIENTE-SITE-A_SERVERS match source-address CLIENTE-SITE-A-SERVER-PROD_172.X.X.78
-set security policies from-zone DMZ_VPN to-zone DMZ_B2B policy ACCESS_FROM_CLIENTE-SITE-A_SERVERS match destination-address CLIENTE-VIP-APP_10.X.X.21/32
-set security policies from-zone DMZ_VPN to-zone DMZ_B2B policy ACCESS_FROM_CLIENTE-SITE-A_SERVERS match application junos-http
-set security policies from-zone DMZ_VPN to-zone DMZ_B2B policy ACCESS_FROM_CLIENTE-SITE-A_SERVERS match application junos-https
-set security policies from-zone DMZ_VPN to-zone DMZ_B2B policy ACCESS_FROM_CLIENTE-SITE-A_SERVERS then permit
-
-
-Pre-Shared-key
-yY4bAGPGuZ67XRHz
-
-'''
 
 def main():
     try:
@@ -364,24 +357,25 @@ def main():
 
     new_vpn = vpn(settings)
     new_policy = policy(settings)
-    #print(new_vpn.phase_1())
-    #print(new_vpn.phase_2())
-    #print(new_vpn.gateway())
-    #print(new_vpn.vpn())
-    #print(new_vpn.tunel_interface())
-    #print(new_vpn.static_route())
-    #print(new_vpn.prefix_list())
-    #print(new_vpn.outbound_dnat_pool())
-    #print(new_vpn.outbound_dnat())
-    #print(new_vpn.source_pool())
-    #print(new_vpn.outbound_nat())
-    #print(new_vpn.destination_pool())
-    #print(new_vpn.destination_nat())
-    #print(new_vpn.inbound_source_pool())
-    #print(new_vpn.inbound_nat())
+    print(new_vpn.phase_1())
+    print(new_vpn.phase_2())
+    print(new_vpn.gateway())
+    print(new_vpn.vpn())
+    print(new_vpn.tunel_interface())
+    print(new_vpn.static_route())
+    print(new_vpn.prefix_list())
+    print(new_vpn.outbound_dnat_pool())
+    print(new_vpn.outbound_dnat())
+    print(new_vpn.source_pool())
+    print(new_vpn.outbound_nat())
+    print(new_vpn.destination_pool())
+    print(new_vpn.destination_nat())
+    print(new_vpn.inbound_source_pool())
+    print(new_vpn.inbound_nat())
     print(new_policy.applications())
     print(new_policy.address_book())
     print(new_policy.outbound())
+    print(new_policy.inbound())
 
 if __name__ == "__main__":
     main()
