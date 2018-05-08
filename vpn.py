@@ -5,7 +5,6 @@ import json
 
 class vpn:
     def __init__(self, settings):
-        #self.settings = json.loads(vpn_settings)
         self.vpn_general = settings["vpn"]
         self.ike_proposal = settings["ike_proposal"]
         self.ike_policy = settings["ike_policy"]
@@ -80,7 +79,7 @@ class vpn:
 #INTERFACE TUNEL DEFINITION
     def tunel_interface(self):
         ti = "" +\
-        "\nset interfaces st0 unit %s description %s" % (self.vpn_tunnel_definition["secure_interface"], self.vpn_general["description"]) +\
+        "\nset interfaces st0 unit %s description \"%s\"" % (self.vpn_tunnel_definition["secure_interface"], self.vpn_general["description"]) +\
         "\nset security zones security-zone DMZ_VPN interfaces st0.%s" % self.vpn_tunnel_definition["secure_interface"]
 
         return ti
@@ -330,11 +329,11 @@ class policy:
         command = ""
 
         for env in self.encryption_domains["remote"]:
-            command = command + "\nset security policies from-zone DMZ_VPN to-zone DMZ_B2B policy ACCESS_FROM_%s_%s source-address %s" % \
+            command = command + "\nset security policies from-zone DMZ_VPN to-zone DMZ_B2B policy ACCESS_FROM_%s_%s match source-address %s" % \
             (self.vpn_general["name"], env["env"], self.address_book_dmz_vpn[env["env"]])
 
         for env, dst in self.address_book_dmz_b2b_server.items():
-            command = command + "\nset security policies from-zone DMZ_VPN to-zone DMZ_B2B policy ACCESS_FROM_%s_%s destination-address %s" % \
+            command = command + "\nset security policies from-zone DMZ_VPN to-zone DMZ_B2B policy ACCESS_FROM_%s_%s match destination-address %s" % \
             (self.vpn_general["name"], env, dst)
 
         for env in self.ports["lports"]:
