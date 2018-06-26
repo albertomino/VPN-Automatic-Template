@@ -1,5 +1,5 @@
-import sys
-import ipaddress
+#import sys
+#import ipaddress
 import json
 
 
@@ -23,7 +23,7 @@ class vpn:
 #PHASE-1
     def phase_1(self):
         ike = "" +\
-        "\nset security ike proposal %s description %s" % (self.ike_proposal["name"], self.vpn_general["description"]) +\
+        "\nset security ike proposal %s description \"%s\"" % (self.ike_proposal["name"], self.vpn_general["description"]) +\
         "\nset security ike proposal %s authentication-method %s" % (self.ike_proposal["name"], self.ike_proposal["authentication_method"]) +\
         "\nset security ike proposal %s dh-group %s" % (self.ike_proposal["name"], self.ike_proposal["diffie_hellman_group"]) +\
         "\nset security ike proposal %s authentication-algorithm %s" % (self.ike_proposal["name"], self.ike_proposal["authentication_algorithm"]) +\
@@ -112,8 +112,8 @@ class vpn:
 
         for env in self.encryption_domains["remote"]:
             command = command + "\nset security nat destination pool %s_%s_%s address %s" % \
-            (self.vpn_general["name"], env["env"], env["net"],env["net"])
-            self.outbound_dnat_pool_names[env["env"]] = "%s_%s_%s" % (self.vpn_general["name"], env["env"], env["net"])
+            (self.vpn_general["name"], env["env"], env["net"].replace(".", "_").split("/")[0],env["net"])
+            self.outbound_dnat_pool_names[env["env"]] = "%s_%s_%s" % (self.vpn_general["name"], env["env"], env["net"].replace(".", "_").split("/")[0])
 
         return command
 
@@ -143,9 +143,9 @@ class vpn:
         self.snat_pools_names = {}
 
         for ip in self.encryption_domains["local"]:
-            snat_pools = snat_pools + "\nset security nat source pool %s_%s_%s address %s" % (self.vpn_general["name"], ip.get("env"), ip.get("net"), \
+            snat_pools = snat_pools + "\nset security nat source pool %s_%s_%s address %s" % (self.vpn_general["name"], ip.get("env"), ip.get("net").replace(".", "_").split("/")[0], \
             ip.get("net"))
-            self.snat_pools_names[ip.get("env")] = "%s_%s_%s" % (self.vpn_general["name"], ip.get("env"), ip.get("net"))
+            self.snat_pools_names[ip.get("env")] = "%s_%s_%s" % (self.vpn_general["name"], ip.get("env"), ip.get("net").replace(".", "_").split("/")[0])
 
         return snat_pools
 
@@ -156,7 +156,7 @@ class vpn:
             for pool in env["nets"]: command = command + "\nset security nat source rule-set NAT_SRC_VPN rule %s-%s match source-address %s" % \
             (self.vpn_general["name"], env["env"], pool)
 
-        for env in self.nat_encryption_domains["remote"]:
+        for env in self.encryption_domains["remote"]:
              command = command + "\nset security nat source rule-set NAT_SRC_VPN rule %s-%s match destination-address %s" % \
              (self.vpn_general["name"], env["env"], env["net"])
 
@@ -179,8 +179,8 @@ class vpn:
 
         for env in self.local_server:
             dpools = dpools + "\nset security nat destination pool %s_%s_%s address %s" % \
-            (self.vpn_general["name"], env["env"], env["server"], env["server"])
-            self.dnat_pool_names[env["env"]] = "%s_%s_%s" % (self.vpn_general["name"], env["env"], env["server"])
+            (self.vpn_general["name"], env["env"], env["server"].replace(".", "_").split("/")[0], env["server"])
+            self.dnat_pool_names[env["env"]] = "%s_%s_%s" % (self.vpn_general["name"], env["env"], env["server"].replace(".", "_").split("/")[0])
 
         return dpools
 
@@ -214,8 +214,8 @@ class vpn:
         self.inbound_spools_names = {}
 
         for env in self.nat_encryption_domains["remote"]:
-            inbound_spools = inbound_spools + "\nset security nat source pool %s_%s_%s address %s" % (self.vpn_general["name"], env["env"], env["net"], env["net"])
-            self.inbound_spools_names[env["env"]] = "%s_%s_%s" % (self.vpn_general["name"], env["env"], env["net"])
+            inbound_spools = inbound_spools + "\nset security nat source pool %s_%s_%s address %s" % (self.vpn_general["name"], env["env"], env["net"].replace(".", "_").split("/")[0], env["net"])
+            self.inbound_spools_names[env["env"]] = "%s_%s_%s" % (self.vpn_general["name"], env["env"], env["net"].replace(".", "_").split("/")[0])
 
         return inbound_spools
 
