@@ -142,7 +142,7 @@ class vpn:
 
         self.snat_pools_names = {}
 
-        for ip in self.encryption_domains["local"]:
+        for ip in self.nat_encryption_domains["local"]:
             snat_pools = snat_pools + "\nset security nat source pool %s_%s_%s address %s" % (self.vpn_general["name"], ip.get("env"), ip.get("net").replace(".", "_").split("/")[0], \
             ip.get("net"))
             self.snat_pools_names[ip.get("env")] = "%s_%s_%s" % (self.vpn_general["name"], ip.get("env"), ip.get("net").replace(".", "_").split("/")[0])
