@@ -261,15 +261,20 @@ class policy:
         self.applications_names_remote = {}
 
         for app in self.ports["lports"]:
-            command = command + "\nset applications application TCP-%s protocol tcp" % app["port"]
-            command = command + "\nset applications application TCP-%s destination-port %s" % (app["port"], app["port"])
-            self.applications_names_local[app["env"]] = "TCP-%s" % app["port"]
+            if not self.applications_names_local["PROD"] in self.applications_names_local.values():
+                command = command + "\nset applications application %s-%s-TCP-%s protocol tcp" % (self.vpn_general["name"], app["name"], app["port"])
+                command = command + "\nset applications application %s-%s-TCP-%s destination-port %s" % (self.vpn_general["name"], app["name"], app["port"], app["port"])
+                self.applications_names_local[app["env"]] = "%s-%s-TCP-%s" % (self.vpn_general["name"], app["name"], app["port"])
+            print(self.applications_names_local["PROD"])
 
         for app in self.ports["dports"]:
-            command = command + "\nset applications application TCP-%s protocol tcp" % app["port"]
-            command = command + "\nset applications application TCP-%s destination-port %s" % (app["port"], app["port"])
-            self.applications_names_remote[app["env"]] = "TCP-%s" % app["port"]
+            #if not self.applications_names_remote[app["name"]]:
+            command = command + "\nset applications application %s-%s-TCP-%s protocol tcp" % (app["env"], app["name"], app["port"])
+            command = command + "\nset applications application %s-%s-TCP-%s destination-port %s" % (app["env"], app["name"], app["port"], app["port"])
+            self.applications_names_remote[app["env"]] = "%s-%s-TCP-%s" % (app["env"], app["name"], app["port"])
 
+        print(self.applications_names_local)
+        print(self.applications_names_remote)
         return command
 
     def address_book(self):
@@ -356,25 +361,25 @@ def main():
 
     new_vpn = vpn(settings)
     new_policy = policy(settings)
-    print(new_vpn.phase_1())
-    print(new_vpn.phase_2())
-    print(new_vpn.gateway())
-    print(new_vpn.vpn())
-    print(new_vpn.tunel_interface())
-    print(new_vpn.static_route())
-    print(new_vpn.prefix_list())
-    print(new_vpn.outbound_dnat_pool())
-    print(new_vpn.outbound_dnat())
-    print(new_vpn.source_pool())
-    print(new_vpn.outbound_nat())
-    print(new_vpn.destination_pool())
-    print(new_vpn.destination_nat())
-    print(new_vpn.inbound_source_pool())
-    print(new_vpn.inbound_nat())
+    #print(new_vpn.phase_1())
+    #print(new_vpn.phase_2())
+    #print(new_vpn.gateway())
+    #print(new_vpn.vpn())
+    #print(new_vpn.tunel_interface())
+    #print(new_vpn.static_route())
+    #print(new_vpn.prefix_list())
+    #print(new_vpn.outbound_dnat_pool())
+    #print(new_vpn.outbound_dnat())
+    #print(new_vpn.source_pool())
+    #print(new_vpn.outbound_nat())
+    #print(new_vpn.destination_pool())
+    #print(new_vpn.destination_nat())
+    #print(new_vpn.inbound_source_pool())
+    #print(new_vpn.inbound_nat())
     print(new_policy.applications())
-    print(new_policy.address_book())
-    print(new_policy.outbound())
-    print(new_policy.inbound())
+    #print(new_policy.address_book())
+    #print(new_policy.outbound())
+    #print(new_policy.inbound())
 
 if __name__ == "__main__":
     main()
