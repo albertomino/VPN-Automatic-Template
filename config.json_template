@@ -1,0 +1,68 @@
+{
+   "vpn"             : {
+       "name"    : "ARCOS-DORADOS",
+       "description" : "VPN contra destileria ARCOS-DORADOS",
+       "purpose"     : "",
+       "owner"       : "Payments Department"
+   },
+   "ike_proposal"          : {
+       "name"                               : "ARCOS-DORADOS",
+       "authentication_method"              : "pre-shared-key",
+       "available_diffie_hellman_group"     : ["grup1 | group2 | group5 | group14"],
+       "diffie_hellman_group"               : "group2",
+       "available_authentication_algorithm" : ["md5 | sha1 | sha-256 | sha-384"],
+       "authentication_algorithm"           : "sha1",
+       "available_encryption_algorithm"     : ["3des-cbc | aes-128-cbc | aes-192-cbc | aes-256-cbc | des-cbc"],
+       "encryption_algorithm"               : "aes-256-cbc",
+       "lifetime"                           :  28880
+   },
+   "ike_policy"         : {
+       "name"           : "ARCOS-DORADOS",
+       "mode"           : "main",
+       "pre_shared_key" : "quebuenaestatuprima01"
+       },
+   "ike_gateway"    : {
+       "name"                   : "ARCOS-DORADOS-GATEWAY",
+       "external_interface"     : "reth1.404",
+       "address"                : "64.76.2.231",
+       "available_versions"     : ["v1-only | v2-only"],
+       "version"                : "v1-only",
+       "general-ikeid"          : false
+   },
+   "ipsec_proposal"   : {
+       "name"                       : "ARCOS-DORADOS-PROPOSAL-POLICY",
+       "protocol"                   : "esp",
+       "available_authentication_algorithm" : ["hmac-md5-96 | hmac-sha1-96 | hmac-sha-256-128"],
+       "authentication_algorithm"   : "hmac-sha1-96",
+       "available_encryption_algorithm" : ["3des-cbc | aes-128-cbc | aes-192-cbc | aes-256-cbc"],
+       "encryption_algorithm"       : "aes-256-cbc",
+       "lifetime"                   : "28880"
+   },
+   "ipsec_policy"   : {
+       "name"       : "ARCOS-DORADOS-IPSEC-POLICY",
+       "available_keys" : ["group1 | group2 | group5 | group14"],
+       "keys"       : "group2",
+       "pfs"        : false
+   },
+   "vpn_tunnel_definition" : {
+       "name"               : "ARCOS-DORADOS-TUNNEL",
+       "secure_interface"   : "43"
+   },
+   "encryption_domains"        : {
+       "local"      : [{"net" : "10.195.3.121/32", "env" : "PROD"}],
+       "remote"     : [{"net" : "10.195.73.150/32", "env" : "PROD"}, {"net" : "10.195.73.151/32", "env" : "DESA"}]
+   },
+   "nat_encryption_domains"  : {
+       "local"      : [{"net" : "172.22.0.83/32", "env" : "PROD"}, {"net" : "172.22.0.84/32", "env" : "DESA"}],
+       "remote"     : [{"net" : "172.22.2.84/32", "env" : "PROD"}, {"net" : "172.22.2.84/32", "env" : "DESA"}]
+   },
+   "snat_pools"      : {
+       "description" : "Servidores que desde la infra de MELI consumiran los endpoints a través de esta VPN",
+       "pools"       : [{"nets" : ["10.77.86.0/25", "10.77.86.128/25", "10.77.87.0/25", "10.77.87.128/25"], "env" : "PROD", "name" : "MPMOBILE-API-INSTORE"}]
+   },
+   "ports"          : {
+       "dports"     : [{"port" : "443", "env" : "PROD", "name" : "WEB-SEGURA"}, {"port" : "80", "env" : "DESA", "name" : "WEB-INSEGURA"}],
+       "lports"     : [{"port" : "4443", "env" : "PROD", "name" : "WEB-LOCA-SEGURA"}, {"port" : "8080", "env" : "DESA", "name" : "WEB-LOCA"}]
+   },
+   "local_server"   : [{"server" : "10.32.177.215/32", "env" : "PROD", "name" : "VIP"}]
+}
