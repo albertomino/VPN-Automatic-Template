@@ -123,15 +123,15 @@ class vpn:
 
         for env in self.snat_pools:
             for pool in env["nets"]:
-                command = command + "\nset security nat destination rule-set DNAT_FROM_INSIDE rule %s_%s match source-address %s" % \
+                command = command + "\nset security nat destination rule-set DNAT_FROM_INSIDE rule %s_%s_OUT-DNAT match source-address %s" % \
                 (self.vpn_general["name"], env["env"], pool)
 
         for env in self.nat_encryption_domains["remote"]:
-            command = command + "\nset security nat destination rule-set DNAT_FROM_INSIDE rule %s_%s match destination-address %s" % \
+            command = command + "\nset security nat destination rule-set DNAT_FROM_INSIDE rule %s_%s_OUT-DNAT match destination-address %s" % \
             (self.vpn_general["name"], env["env"], env["net"])
 
         for env in self.nat_encryption_domains["remote"]:
-            command = command + "\nset security nat destination rule-set DNAT_FROM_INSIDE rule %s_%s then destination-nat pool %s" % \
+            command = command + "\nset security nat destination rule-set DNAT_FROM_INSIDE rule %s_%s_OUT-DNAT then destination-nat pool %s" % \
             (self.vpn_general["name"], env["env"], self.outbound_dnat_pool_names[env["env"]])
 
         return command
@@ -153,18 +153,18 @@ class vpn:
         command = ""
 
         for env in self.snat_pools:
-            for pool in env["nets"]: command = command + "\nset security nat source rule-set NAT_SRC_VPN rule %s-%s match source-address %s" % \
+            for pool in env["nets"]: command = command + "\nset security nat source rule-set NAT_SRC_VPN rule %s-%s_OUT-SNAT match source-address %s" % \
             (self.vpn_general["name"], env["env"], pool)
 
         for env in self.encryption_domains["remote"]:
-             command = command + "\nset security nat source rule-set NAT_SRC_VPN rule %s-%s match destination-address %s" % \
+             command = command + "\nset security nat source rule-set NAT_SRC_VPN rule %s-%s_OUT-SNAT match destination-address %s" % \
              (self.vpn_general["name"], env["env"], env["net"])
 
         for env in self.ports["dports"]:
-            command = command + "\nset security nat source rule-set NAT_SRC_VPN rule %s-%s match destination-port %s" % \
+            command = command + "\nset security nat source rule-set NAT_SRC_VPN rule %s-%s_OUT-SNAT match destination-port %s" % \
             (self.vpn_general["name"], env["env"], env["port"])
 
-        for env in self.encryption_domains["local"]: command = command + "\nset security nat source rule-set NAT_SRC_VPN rule %s-%s then source-nat pool %s" % \
+        for env in self.encryption_domains["local"]: command = command + "\nset security nat source rule-set NAT_SRC_VPN rule %s-%s_OUT-SNAT then source-nat pool %s" % \
             (self.vpn_general["name"], env["env"], self.snat_pools_names[env["env"]])
 
         return command
@@ -188,19 +188,19 @@ class vpn:
         command = ""
 
         for env in self.encryption_domains["remote"]:
-            command = command + "\nset security nat destination rule-set NAT_DEST_VPN rule %s_%s match source-address %s" % \
+            command = command + "\nset security nat destination rule-set NAT_DEST_VPN rule %s_%s_IN-DNAT match source-address %s" % \
             (self.vpn_general["name"], env["env"], env["net"])
 
         for env in self.encryption_domains["local"]:
-            command = command + "\nset security nat destination rule-set NAT_DEST_VPN rule %s_%s match destination-address %s" % \
+            command = command + "\nset security nat destination rule-set NAT_DEST_VPN rule %s_%s_IN-DNAT match destination-address %s" % \
             (self.vpn_general["name"], env["env"], env["net"])
 
         for env in self.ports["lports"]:
-            command = command + "\nset security nat destination rule-set NAT_DEST_VPN rule %s_%s match destination-port %s" % \
+            command = command + "\nset security nat destination rule-set NAT_DEST_VPN rule %s_%s_IN-DNAT match destination-port %s" % \
             (self.vpn_general["name"], env["env"], env["port"])
 
         for env in self.local_server:
-            command = command + "\nset security nat destination rule-set NAT_DEST_VPN rule %s_%s then destination-nat pool %s" % \
+            command = command + "\nset security nat destination rule-set NAT_DEST_VPN rule %s_%s_IN-DNAT then destination-nat pool %s" % \
             (self.vpn_general["name"], env["env"], self.dnat_pool_names[env["env"]])
 
         return command
@@ -223,19 +223,19 @@ class vpn:
         command = ""
 
         for env in self.encryption_domains["remote"]:
-            command = command + "\nset security nat source rule-set SNAT_VPN_TO_B2B rule %s_%s match source-address %s" % \
+            command = command + "\nset security nat source rule-set SNAT_VPN_TO_B2B rule %s_%s_IN-SNAT match source-address %s" % \
             (self.vpn_general["name"], env["env"], env["net"])
 
         for env in self.local_server:
-            command = command + "\nset security nat source rule-set SNAT_VPN_TO_B2B rule %s_%s match destination-address %s" % \
+            command = command + "\nset security nat source rule-set SNAT_VPN_TO_B2B rule %s_%s_IN-SNAT match destination-address %s" % \
             (self.vpn_general["name"], env["env"], env["server"])
 
         for env in self.ports["lports"]:
-            command = command + "\nset security nat source rule-set SNAT_VPN_TO_B2B rule %s_%s match destination-port %s" % \
+            command = command + "\nset security nat source rule-set SNAT_VPN_TO_B2B rule %s_%s_IN-SNAT match destination-port %s" % \
             (self.vpn_general["name"], env["env"], env["port"])
 
         for env in self.nat_encryption_domains["remote"]:
-            command = command + "\nset security nat source rule-set SNAT_VPN_TO_B2B rule %s_%s then source-nat pool %s" % \
+            command = command + "\nset security nat source rule-set SNAT_VPN_TO_B2B rule %s_%s_IN-SNAT then source-nat pool %s" % \
             (self.vpn_general["name"], env["env"], self.inbound_spools_names[env["env"]])
 
         return command
