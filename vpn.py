@@ -97,7 +97,7 @@ class vpn:
 #MODIFYING PREFIX-LIST TO PROCESS THE NEW VPN TRAFFIC
     def prefix_list(self):
         comando = ""
-        for ip in self.encryption_domains["remote"]: comando = comando + "\n" + "set policy-options prefix-list PBR_Inet-0 %s" % ip.get("net")
+        for ip in self.nat_encryption_domains["remote"]: comando = comando + "\n" + "set policy-options prefix-list PBR_Inet-0 %s" % ip.get("net")
         return comando
 
 
@@ -142,7 +142,7 @@ class vpn:
 
         self.snat_pools_names = {}
 
-        for ip in self.nat_encryption_domains["local"]:
+        for ip in self.encryption_domains["local"]:
             snat_pools = snat_pools + "\nset security nat source pool %s_%s_%s address %s" % (self.vpn_general["name"], ip.get("env"), ip.get("net").replace(".", "_").split("/")[0], \
             ip.get("net"))
             self.snat_pools_names[ip.get("env")] = "%s_%s_%s" % (self.vpn_general["name"], ip.get("env"), ip.get("net").replace(".", "_").split("/")[0])
