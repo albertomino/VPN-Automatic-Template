@@ -58,6 +58,7 @@
    },
    "snat_pools"      : {
        "description" : "Servidores que desde la infra de MELI consumiran los endpoints a través de esta VPN",
+       "fury_app"    : "la app de fury que consume a través de esta vpn", 
        "pools"       : [{"nets" : ["10.77.86.0/25", "10.77.86.128/25", "10.77.87.0/25", "10.77.87.128/25"], "env" : "PROD", "name" : "MPMOBILE-API-INSTORE"}, {"nets" : ["10.77.86.0/25", "10.77.86.128/25", "10.77.87.0/25", "10.77.87.128/25"], "env" : "DESA", "name" : "MPMOBILE-API-INSTORE"}]
    },
    "ports"          : {
