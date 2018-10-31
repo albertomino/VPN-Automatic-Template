@@ -1,7 +1,7 @@
 #import sys
 #import ipaddress
 import json
-
+import click
 
 class vpn:
     def __init__(self, settings):
@@ -24,15 +24,30 @@ class vpn:
     def phase_1(self):
         ike = "" +\
         "\nset security ike proposal %s description \"%s\"" % (self.ike_proposal["name"], self.vpn_general["description"]) +\
-        "\nset security ike proposal %s authentication-method %s" % (self.ike_proposal["name"], self.ike_proposal["authentication_method"]) +\
-        "\nset security ike proposal %s dh-group %s" % (self.ike_proposal["name"], self.ike_proposal["diffie_hellman_group"]) +\
-        "\nset security ike proposal %s authentication-algorithm %s" % (self.ike_proposal["name"], self.ike_proposal["authentication_algorithm"]) +\
-        "\nset security ike proposal %s encryption-algorithm %s" % (self.ike_proposal["name"], self.ike_proposal["encryption_algorithm"]) +\
+        "\nset security ike proposal %s authentication-method %s" % (self.ike_proposal["name"],self.ike_proposal["authentication_method"]) +\
+        "\nset security ike proposal %s dh-group %s" % (self.ike_proposal["name"], self.ike_proposal["diffie_hellman_group"])+\
+        "\nset security ike proposal %s authentication-algorithm %s" % (self.ike_proposal["name"],self.ike_proposal["authentication_algorithm"]) +\
+        "\nset security ike proposal %s encryption-algorithm %s" % (self.ike_proposal["name"],self.ike_proposal["encryption_algorithm"]) +\
         "\nset security ike proposal %s lifetime-seconds %s" % (self.ike_proposal["name"], self.ike_proposal["lifetime"]) +\
         "\n" +\
         "\nset security ike policy %s mode main" % self.ike_policy["name"] +\
         "\nset security ike policy %s proposals %s" % (self.ike_policy["name"], self.ike_proposal["name"]) +\
-        "\nset security ike policy %s pre-shared-key ascii-text %s" % (self.ike_policy["name"], self.ike_policy["pre_shared_key"])
+        "\nset security ike policy %s pre-shared-key ascii-text %s" % (self.ike_policy["name"],self.ike_policy["pre_shared_key"])
+
+        return ike
+
+    def phase_1_delete(self):
+        ike = "" +\
+        "\ndetete security ike proposal %s description \"%s\"" % (self.ike_proposal["name"], self.vpn_general["description"]) +\
+        "\ndelete security ike proposal %s authentication-method %s" % (self.ike_proposal["name"],self.ike_proposal["authentication_method"]) +\
+        "\ndelete security ike proposal %s dh-group %s" % (self.ike_proposal["name"], self.ike_proposal["diffie_hellman_group"])+\
+        "\ndelete security ike proposal %s authentication-algorithm %s" % (self.ike_proposal["name"],self.ike_proposal["authentication_algorithm"]) +\
+        "\ndelete security ike proposal %s encryption-algorithm %s" % (self.ike_proposal["name"],self.ike_proposal["encryption_algorithm"]) +\
+        "\ndelete security ike proposal %s lifetime-seconds %s" % (self.ike_proposal["name"], self.ike_proposal["lifetime"]) +\
+        "\n" +\
+        "\ndelete security ike policy %s mode main" % self.ike_policy["name"] +\
+        "\ndelete security ike policy %s proposals %s" % (self.ike_policy["name"], self.ike_proposal["name"]) +\
+        "\ndelete security ike policy %s pre-shared-key ascii-text %s" % (self.ike_policy["name"],self.ike_policy["pre_shared_key"])
 
         return ike
 
@@ -45,6 +60,19 @@ class vpn:
         "\nset security ipsec proposal %s lifetime-seconds %s" % (self.ipsec_proposal["name"], self.ipsec_proposal["lifetime"]) +\
         "\n" +\
         "\nset security ipsec policy %s proposals %s" % (self.ipsec_policy["name"], self.ipsec_proposal["name"])
+
+        if self.ipsec_policy["pfs"] == True: ipsec = ipsec + "\nset security ipsec policy %s perfect-forward-secrecy keys %s" % (self.ipsec_policy["name"], self.ipsec_policy["keys"])
+
+        return ipsec
+
+    def phase_2_delete(self):
+        ipsec = "" +\
+        "\ndelete security ipsec proposal %s protocol esp" % self.ipsec_proposal["name"] +\
+        "\ndelete security ipsec proposal %s authentication-algorithm %s" % (self.ipsec_proposal["name"], self.ipsec_proposal["authentication_algorithm"]) +\
+        "\ndelete security ipsec proposal %s encryption-algorithm %s" % (self.ipsec_proposal["name"], self.ipsec_proposal["encryption_algorithm"]) +\
+        "\ndelete security ipsec proposal %s lifetime-seconds %s" % (self.ipsec_proposal["name"], self.ipsec_proposal["lifetime"]) +\
+        "\n" +\
+        "\ndelete security ipsec policy %s proposals %s" % (self.ipsec_policy["name"], self.ipsec_proposal["name"])
 
         if self.ipsec_policy["pfs"] == True: ipsec = ipsec + "\nset security ipsec policy %s perfect-forward-secrecy keys %s" % (self.ipsec_policy["name"], self.ipsec_policy["keys"])
 
@@ -64,6 +92,16 @@ class vpn:
 
         return ikegateway
 
+    def gateway_delete(self):
+        ikegateway = "" +\
+        "\ndelete security ike gateway %s ike-policy %s" % (self.ike_gateway["name"], self.ike_policy["name"]) +\
+        "\ndelete security ike gateway %s address %s" % (self.ike_gateway["name"], self.ike_gateway["address"]) +\
+        "\ndelete security ike gateway %s external-interface %s" % (self.ike_gateway["name"], self.ike_gateway["external_interface"]) +\
+        "\ndelete security ike gateway %s version %s" % (self.ike_gateway["name"], self.ike_gateway["version"])
+
+        if self.ike_gateway["general-ikeid"] == True: ikegateway = ikegateway + "\nset security ike gateway %s general-ikeid" % self.ike_gateway["name"]
+
+        return ikegateway
 
 #VPN TUNEL DEFINITION
     def vpn(self):
@@ -75,6 +113,14 @@ class vpn:
 
         return vpntunnel
 
+    def vpn_delete(self):
+        vpntunnel = "" +\
+        "\ndelete security ipsec vpn %s bind-interface st0.%s" % (self.vpn_tunnel_definition["name"], self.vpn_tunnel_definition["secure_interface"]) +\
+        "\ndelete security ipsec vpn %s ike gateway %s" % (self.vpn_tunnel_definition["name"], self.ike_gateway["name"]) +\
+        "\ndelete security ipsec vpn %s ike ipsec-policy %s" % (self.vpn_tunnel_definition["name"], self.ipsec_policy["name"]) +\
+        "\ndelete security ipsec vpn %s establish-tunnels immediately" % self.vpn_tunnel_definition["name"]
+
+        return vpntunnel
 
 #INTERFACE TUNEL DEFINITION
     def tunel_interface(self):
@@ -347,8 +393,9 @@ class policy:
 
         return command
 
-
-def main():
+@click.command()
+@click.option('--delete', is_flag=True, help='If you want to delete a VPN already configured with the params inside the json_config file.')
+def main(delete):
     try:
         input_file = open("config.json", "r").read()
         settings = json.loads(input_file)
@@ -358,25 +405,32 @@ def main():
 
     new_vpn = vpn(settings)
     new_policy = policy(settings)
-    print(new_vpn.phase_1())
-    print(new_vpn.phase_2())
-    print(new_vpn.gateway())
-    print(new_vpn.vpn())
-    print(new_vpn.tunel_interface())
-    print(new_vpn.static_route())
-    print(new_vpn.prefix_list())
-    print(new_vpn.outbound_dnat_pool())
-    print(new_vpn.outbound_dnat())
-    print(new_vpn.source_pool())
-    print(new_vpn.outbound_nat())
-    print(new_vpn.destination_pool())
-    print(new_vpn.destination_nat())
-    print(new_vpn.inbound_source_pool())
-    print(new_vpn.inbound_nat())
-    print(new_policy.applications())
-    print(new_policy.address_book())
-    print(new_policy.outbound())
-    print(new_policy.inbound())
+
+    if delete:
+        print(new_vpn.phase_1_delete())
+        print(new_vpn.phase_2_delete())
+        print(new_vpn.gateway_delete())
+        print(new_vpn.vpn_delete())
+    else:
+        print(new_vpn.phase_1())
+        print(new_vpn.phase_2())
+        print(new_vpn.gateway())
+        print(new_vpn.vpn())
+        print(new_vpn.tunel_interface())
+        print(new_vpn.static_route())
+        print(new_vpn.prefix_list())
+        print(new_vpn.outbound_dnat_pool())
+        print(new_vpn.outbound_dnat())
+        print(new_vpn.source_pool())
+        print(new_vpn.outbound_nat())
+        print(new_vpn.destination_pool())
+        print(new_vpn.destination_nat())
+        print(new_vpn.inbound_source_pool())
+        print(new_vpn.inbound_nat())
+        print(new_policy.applications())
+        print(new_policy.address_book())
+        print(new_policy.outbound())
+        print(new_policy.inbound())
 
 if __name__ == "__main__":
     main()
