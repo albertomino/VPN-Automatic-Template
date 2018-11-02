@@ -82,6 +82,7 @@ class vpn:
 #IKE GATEWAY
 
     def gateway(self):
+        print("Hola")
         ikegateway = "" +\
         "\nset security ike gateway %s ike-policy %s" % (self.ike_gateway["name"], self.ike_policy["name"]) +\
         "\nset security ike gateway %s address %s" % (self.ike_gateway["name"], self.ike_gateway["address"]) +\
