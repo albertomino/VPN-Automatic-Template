@@ -624,6 +624,8 @@ class policy:
 
 @click.command()
 @click.option('--delete', is_flag=True, help='If you want to delete a VPN already configured with the params inside the json_config file.')
+@click.option('--in', is_flag=True, help='If you want to create a VPN with inbound traffic only')
+@click.option('--out', is_flag=True, help='If you want to create a VPN with outbound traffic only')
 def main(delete):
     try:
         input_file = open("config.json", "r").read()
