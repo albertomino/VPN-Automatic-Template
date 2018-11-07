@@ -19,7 +19,6 @@ class vpn:
         self.ports = settings["ports"]
         self.local_server = settings["local_server"]
 
-
 #PHASE-1
     def phase_1(self):
         ike = "" +\
@@ -104,7 +103,7 @@ class vpn:
     def tunel_interface(self):
         ti = "" +\
         "\nset interfaces st0 unit %s description \"%s\"" % (self.vpn_tunnel_definition["secure_interface"], self.vpn_general["description"]) +\
-        "\nset interfaces st0 unit %s family inet" % self.vpn_tunnel_definition["secure_interface"]
+        "\nset interfaces st0 unit %s family inet" % self.vpn_tunnel_definition["secure_interface"] +\
         "\nset security zones security-zone DMZ_VPN interfaces st0.%s" % self.vpn_tunnel_definition["secure_interface"]
 
         return ti
@@ -158,7 +157,7 @@ class vpn:
                 (self.vpn_general["name"], env["env"], env["net"])
                 self.outbound_dnat_pool_names[env["env"]] = "%s_%s" % (self.vpn_general["name"], env["env"])
             else:
-                return "Pool_name: %s is too long, it must not be longer than 31 characters and it contains %s" % (pool_name, len(pool_name))
+                raise ValueError("Pool_name: %s is too long, it must not be longer than 31 characters and it contains %s" % (pool_name, len(pool_name)))
 
         return command
 
@@ -667,4 +666,7 @@ def main(delete, inbound, outbound):
         print(new_policy.inbound())
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        print (e)
