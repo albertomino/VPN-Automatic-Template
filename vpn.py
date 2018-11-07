@@ -126,7 +126,7 @@ class vpn:
     def tunel_interface(self):
         ti = "" +\
         "\nset interfaces st0 unit %s description \"%s\"" % (self.vpn_tunnel_definition["secure_interface"], self.vpn_general["description"]) +\
-        "\nset interfaces st0 unit %s family inet" % self.vpn_tunnel_definition["secure_interface"]
+        "\nset interfaces st0 unit %s family inet" % self.vpn_tunnel_definition["secure_interface"] +\
         "\nset security zones security-zone DMZ_VPN interfaces st0.%s" % self.vpn_tunnel_definition["secure_interface"]
 
         return ti
