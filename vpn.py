@@ -108,7 +108,7 @@ class vpn:
 
     def tunel_interface_delete(self):
         ti = "" +\
-        "\ndelete interfaces st0 unit %s" % self.vpn_tunnel_definition["secure_interface"]
+        "\ndelete interfaces st0 unit %s" % self.vpn_tunnel_definition["secure_interface"] +\
         "\ndelete security zones security-zone DMZ_VPN interfaces st0.%s" % self.vpn_tunnel_definition["secure_interface"]
 
         return ti
@@ -195,7 +195,7 @@ class vpn:
 
         return command
 
-    def source_pool(self):
+    def outbound_source_pool(self):
         snat_pools = ""
 
         self.snat_pools_names = {}
@@ -206,11 +206,11 @@ class vpn:
 
         return snat_pools
 
-    def source_pool_delete(self):
+    def outbound_source_pool_delete(self):
         snat_pools = ""
 
         for ip in self.encryption_domains["local"]:
-            snat_pools = snat_pools + "\ndelete security nat source pool %s_%s_%s" % (self.vpn_general["name"], ip.get("env"), ip.get("net").replace(".", "_").split("/")[0])
+            snat_pools = snat_pools + "\ndelete security nat source pool %s_%s" % (self.vpn_general["name"], ip.get("env"))
 
         return snat_pools
 
@@ -308,8 +308,12 @@ class vpn:
         self.inbound_spools_names = {}
 
         for env in self.nat_encryption_domains["remote"]:
-            inbound_spools = inbound_spools + "\nset security nat source pool %s_%s_%s address %s" % (self.vpn_general["name"], env["env"], env["net"].replace(".", "_").split("/")[0], env["net"])
-            self.inbound_spools_names[env["env"]] = "%s_%s_%s" % (self.vpn_general["name"], env["env"], env["net"].replace(".", "_").split("/")[0])
+            source_pool_name = "%s_%s_%s" % (self.vpn_general["name"], env["env"], env["net"].replace(".", "_").split("/")[0])
+            if source_pool_name <= 31:
+                inbound_spools = inbound_spools + "\nset security nat source pool %s_%s_%s address %s" % (self.vpn_general["name"], env["env"], env["net"].replace(".", "_").split("/")[0], env["net"])
+                self.inbound_spools_names[env["env"]] = "%s_%s_%s" % (self.vpn_general["name"], env["env"], env["net"].replace(".", "_").split("/")[0])
+            else:
+                raise ValueError("Source pool name: %s is too long, it must not be longer than 31 characters and it contains %s" % (source_pool_name, len(source_pool_name)))
 
         return inbound_spools
 
@@ -449,7 +453,6 @@ class policy:
             for source in env["nets"]:
                 command = command + "\ndelete security zones security-zone DMZ_B2B address-book address %s_%s_%s" % \
                 (env["name"], env["env"], source)
-                #self.address_book_dmz_b2b.append({env["env"] : "%s_%s_%s" % (env["name"], env["env"], source)})
 
         return command
 
@@ -461,7 +464,6 @@ class policy:
         for env in self.local_server:
             command = command + "\ndelete security zones security-zone DMZ_B2B address-book address %s_%s_%s" % \
             (env["name"], env["env"], env["server"])
-            #self.address_book_dmz_b2b_server[env["env"]] = "%s_%s_%s" % (env["name"], env["env"], env["server"])
 
         return command
 
@@ -473,7 +475,6 @@ class policy:
         for env in self.encryption_domains["remote"]:
             command = command + "\ndelete security zones security-zone DMZ_VPN address-book address %s_%s_%s" % \
             (self.vpn_general["name"], env["env"], env["net"])
-            #self.address_book_dmz_vpn[env["env"]] = "%s_%s_%s" % (self.vpn_general["name"], env["env"], env["net"])
 
         return command
 
@@ -620,7 +621,7 @@ def main(ctx, delete, inbound, outbound, in_and_out):
         print(new_vpn.prefix_list_delete())
         print(new_vpn.outbound_dnat_pool_delete())
         print(new_vpn.outbound_dnat_delete())
-        print(new_vpn.source_pool_delete())
+        print(new_vpn.outbound_source_pool_delete())
         print(new_vpn.outbound_snat_delete())
         print(new_policy.applications_remote_delete())
         print(new_policy.address_book_dmz_b2b_delete())
@@ -652,7 +653,7 @@ def main(ctx, delete, inbound, outbound, in_and_out):
         print(new_vpn.prefix_list())
         print(new_vpn.outbound_dnat_pool())
         print(new_vpn.outbound_dnat())
-        print(new_vpn.source_pool())
+        print(new_vpn.outbound_source_pool())
         print(new_vpn.outbound_snat())
         print(new_policy.applications_remote())
         print(new_policy.address_book_dmz_b2b())
