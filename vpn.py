@@ -1,5 +1,3 @@
-#import sys
-#import ipaddress
 import json
 import click
 
@@ -19,7 +17,6 @@ class vpn:
         self.ports = settings["ports"]
         self.local_server = settings["local_server"]
 
-
 #PHASE-1
     def phase_1(self):
         ike = "" +\
@@ -38,16 +35,8 @@ class vpn:
 
     def phase_1_delete(self):
         ike = "" +\
-        "\ndetete security ike proposal %s description \"%s\"" % (self.ike_proposal["name"], self.vpn_general["description"]) +\
-        "\ndelete security ike proposal %s authentication-method %s" % (self.ike_proposal["name"],self.ike_proposal["authentication_method"]) +\
-        "\ndelete security ike proposal %s dh-group %s" % (self.ike_proposal["name"], self.ike_proposal["diffie_hellman_group"])+\
-        "\ndelete security ike proposal %s authentication-algorithm %s" % (self.ike_proposal["name"],self.ike_proposal["authentication_algorithm"]) +\
-        "\ndelete security ike proposal %s encryption-algorithm %s" % (self.ike_proposal["name"],self.ike_proposal["encryption_algorithm"]) +\
-        "\ndelete security ike proposal %s lifetime-seconds %s" % (self.ike_proposal["name"], self.ike_proposal["lifetime"]) +\
-        "\n" +\
-        "\ndelete security ike policy %s mode main" % self.ike_policy["name"] +\
-        "\ndelete security ike policy %s proposals %s" % (self.ike_policy["name"], self.ike_proposal["name"]) +\
-        "\ndelete security ike policy %s pre-shared-key ascii-text %s" % (self.ike_policy["name"],self.ike_policy["pre_shared_key"])
+        "\ndetete security ike proposal %s" % self.ike_proposal["name"] +\
+        "\ndelete security ike policy %s" % self.ike_policy["name"]
 
         return ike
 
@@ -67,14 +56,8 @@ class vpn:
 
     def phase_2_delete(self):
         ipsec = "" +\
-        "\ndelete security ipsec proposal %s protocol esp" % self.ipsec_proposal["name"] +\
-        "\ndelete security ipsec proposal %s authentication-algorithm %s" % (self.ipsec_proposal["name"], self.ipsec_proposal["authentication_algorithm"]) +\
-        "\ndelete security ipsec proposal %s encryption-algorithm %s" % (self.ipsec_proposal["name"], self.ipsec_proposal["encryption_algorithm"]) +\
-        "\ndelete security ipsec proposal %s lifetime-seconds %s" % (self.ipsec_proposal["name"], self.ipsec_proposal["lifetime"]) +\
-        "\n" +\
-        "\ndelete security ipsec policy %s proposals %s" % (self.ipsec_policy["name"], self.ipsec_proposal["name"])
-
-        if self.ipsec_policy["pfs"] == True: ipsec = ipsec + "\nset security ipsec policy %s perfect-forward-secrecy keys %s" % (self.ipsec_policy["name"], self.ipsec_policy["keys"])
+        "\ndelete security ipsec proposal %s" % self.ipsec_proposal["name"] +\
+        "\ndelete security ipsec policy %s" % self.ipsec_policy["name"]
 
         return ipsec
 
@@ -94,12 +77,7 @@ class vpn:
 
     def gateway_delete(self):
         ikegateway = "" +\
-        "\ndelete security ike gateway %s ike-policy %s" % (self.ike_gateway["name"], self.ike_policy["name"]) +\
-        "\ndelete security ike gateway %s address %s" % (self.ike_gateway["name"], self.ike_gateway["address"]) +\
-        "\ndelete security ike gateway %s external-interface %s" % (self.ike_gateway["name"], self.ike_gateway["external_interface"]) +\
-        "\ndelete security ike gateway %s version %s" % (self.ike_gateway["name"], self.ike_gateway["version"])
-
-        if self.ike_gateway["general-ikeid"] == True: ikegateway = ikegateway + "\nset security ike gateway %s general-ikeid" % self.ike_gateway["name"]
+        "\ndelete security ike gateway %s" % self.ike_gateway["name"]
 
         return ikegateway
 
@@ -115,10 +93,7 @@ class vpn:
 
     def vpn_delete(self):
         vpntunnel = "" +\
-        "\ndelete security ipsec vpn %s bind-interface st0.%s" % (self.vpn_tunnel_definition["name"], self.vpn_tunnel_definition["secure_interface"]) +\
-        "\ndelete security ipsec vpn %s ike gateway %s" % (self.vpn_tunnel_definition["name"], self.ike_gateway["name"]) +\
-        "\ndelete security ipsec vpn %s ike ipsec-policy %s" % (self.vpn_tunnel_definition["name"], self.ipsec_policy["name"]) +\
-        "\ndelete security ipsec vpn %s establish-tunnels immediately" % self.vpn_tunnel_definition["name"]
+        "\ndelete security ipsec vpn %s" % self.vpn_tunnel_definition["name"]
 
         return vpntunnel
 
@@ -133,8 +108,7 @@ class vpn:
 
     def tunel_interface_delete(self):
         ti = "" +\
-        "\ndelete interfaces st0 unit %s description \"%s\"" % (self.vpn_tunnel_definition["secure_interface"], self.vpn_general["description"]) +\
-        "\ndelete interfaces st0 unit %s family inet" % self.vpn_tunnel_definition["secure_interface"]
+        "\ndelete interfaces st0 unit %s" % self.vpn_tunnel_definition["secure_interface"] +\
         "\ndelete security zones security-zone DMZ_VPN interfaces st0.%s" % self.vpn_tunnel_definition["secure_interface"]
 
         return ti
@@ -175,21 +149,22 @@ class vpn:
         self.outbound_dnat_pool_names = {}
 
         for env in self.encryption_domains["remote"]:
-            command = command + "\nset security nat destination pool %s_%s_%s address %s" % \
-            (self.vpn_general["name"], env["env"], env["net"].replace(".", "_").split("/")[0],env["net"])
-            self.outbound_dnat_pool_names[env["env"]] = "%s_%s_%s" % (self.vpn_general["name"], env["env"], env["net"].replace(".", "_").split("/")[0])
+            pool_name = "%s_%s" % (self.vpn_general["name"], env["env"])
+            if len(pool_name) <= 31:
+                command = command + "\nset security nat destination pool %s_%s address %s" % \
+                (self.vpn_general["name"], env["env"], env["net"])
+                self.outbound_dnat_pool_names[env["env"]] = "%s_%s" % (self.vpn_general["name"], env["env"])
+            else:
+                raise ValueError("Pool_name: %s is too long, it must not be longer than 31 characters and it contains %s" % (pool_name, len(pool_name)))
 
         return command
 
     def outbound_dnat_pool_delete(self):
         command = ""
 
-        self.outbound_dnat_pool_names = {}
-
         for env in self.encryption_domains["remote"]:
-            command = command + "\ndelete security nat destination pool %s_%s_%s address %s" % \
-            (self.vpn_general["name"], env["env"], env["net"].replace(".", "_").split("/")[0],env["net"])
-            self.outbound_dnat_pool_names[env["env"]] = "%s_%s_%s" % (self.vpn_general["name"], env["env"], env["net"].replace(".", "_").split("/")[0])
+            command = command + "\ndelete security nat destination pool %s_%s" % \
+            (self.vpn_general["name"], env["env"])
 
         return command
 
@@ -198,15 +173,15 @@ class vpn:
 
         for env in self.snat_pools:
             for pool in env["nets"]:
-                command = command + "\nset security nat destination rule-set DNAT_FROM_INSIDE rule %s_%s_OUT-DNAT match source-address %s" % \
+                command = command + "\nset security nat destination rule-set DNAT_FROM_INSIDE rule %s_%s match source-address %s" % \
                 (self.vpn_general["name"], env["env"], pool)
 
         for env in self.nat_encryption_domains["remote"]:
-            command = command + "\nset security nat destination rule-set DNAT_FROM_INSIDE rule %s_%s_OUT-DNAT match destination-address %s" % \
+            command = command + "\nset security nat destination rule-set DNAT_FROM_INSIDE rule %s_%s match destination-address %s" % \
             (self.vpn_general["name"], env["env"], env["net"])
 
         for env in self.nat_encryption_domains["remote"]:
-            command = command + "\nset security nat destination rule-set DNAT_FROM_INSIDE rule %s_%s_OUT-DNAT then destination-nat pool %s" % \
+            command = command + "\nset security nat destination rule-set DNAT_FROM_INSIDE rule %s_%s then destination-nat pool %s" % \
             (self.vpn_general["name"], env["env"], self.outbound_dnat_pool_names[env["env"]])
 
         return command
@@ -215,41 +190,27 @@ class vpn:
         command = ""
 
         for env in self.snat_pools:
-            for pool in env["nets"]:
-                command = command + "\ndelete security nat destination rule-set DNAT_FROM_INSIDE rule %s_%s_OUT-DNAT match source-address %s" % \
-                (self.vpn_general["name"], env["env"], pool)
-
-        for env in self.nat_encryption_domains["remote"]:
-            command = command + "\ndelete security nat destination rule-set DNAT_FROM_INSIDE rule %s_%s_OUT-DNAT match destination-address %s" % \
-            (self.vpn_general["name"], env["env"], env["net"])
-
-        for env in self.nat_encryption_domains["remote"]:
-            command = command + "\ndelete security nat destination rule-set DNAT_FROM_INSIDE rule %s_%s_OUT-DNAT then destination-nat pool %s" % \
-            (self.vpn_general["name"], env["env"], self.outbound_dnat_pool_names[env["env"]])
+            command = command + "\ndelete security nat destination rule-set DNAT_FROM_INSIDE rule %s_%s" % \
+                (self.vpn_general["name"], env["env"])
 
         return command
 
-    def source_pool(self):
+    def outbound_source_pool(self):
         snat_pools = ""
 
         self.snat_pools_names = {}
 
         for ip in self.encryption_domains["local"]:
-            snat_pools = snat_pools + "\nset security nat source pool %s_%s_%s address %s" % (self.vpn_general["name"], ip.get("env"), ip.get("net").replace(".", "_").split("/")[0], \
-            ip.get("net"))
-            self.snat_pools_names[ip.get("env")] = "%s_%s_%s" % (self.vpn_general["name"], ip.get("env"), ip.get("net").replace(".", "_").split("/")[0])
+            snat_pools = snat_pools + "\nset security nat source pool %s_%s address %s" % (self.vpn_general["name"], ip.get("env"), ip.get("net"))
+            self.snat_pools_names[ip.get("env")] = "%s_%s" % (self.vpn_general["name"], ip.get("env"))
 
         return snat_pools
 
-    def source_pool_delete(self):
+    def outbound_source_pool_delete(self):
         snat_pools = ""
 
-        self.snat_pools_names = {}
-
         for ip in self.encryption_domains["local"]:
-            snat_pools = snat_pools + "\ndelete security nat source pool %s_%s_%s address %s" % (self.vpn_general["name"], ip.get("env"), ip.get("net").replace(".", "_").split("/")[0], \
-            ip.get("net"))
-            self.snat_pools_names[ip.get("env")] = "%s_%s_%s" % (self.vpn_general["name"], ip.get("env"), ip.get("net").replace(".", "_").split("/")[0])
+            snat_pools = snat_pools + "\ndelete security nat source pool %s_%s" % (self.vpn_general["name"], ip.get("env"))
 
         return snat_pools
 
@@ -257,18 +218,22 @@ class vpn:
         command = ""
 
         for env in self.snat_pools:
-            for pool in env["nets"]: command = command + "\nset security nat source rule-set NAT_SRC_VPN rule %s-%s_OUT-SNAT match source-address %s" % \
+            for pool in env["nets"]: command = command + "\nset security nat source rule-set NAT_SRC_VPN rule %s-%s match source-address %s" % \
             (self.vpn_general["name"], env["env"], pool)
 
         for env in self.encryption_domains["remote"]:
-             command = command + "\nset security nat source rule-set NAT_SRC_VPN rule %s-%s_OUT-SNAT match destination-address %s" % \
+            rule_name = "%s-%s" % (self.vpn_general["name"], env["env"])
+            if len(rule_name) <= 31:
+                command = command + "\nset security nat source rule-set NAT_SRC_VPN rule %s-%s match destination-address %s" % \
              (self.vpn_general["name"], env["env"], env["net"])
+            else:
+                raise ValueError("Rule_name: %s is too long, it must not be longer than 31 characters and it contains %s" % (rule_name, len(rule_name)))
 
         for env in self.ports["dports"]:
-            command = command + "\nset security nat source rule-set NAT_SRC_VPN rule %s-%s_OUT-SNAT match destination-port %s" % \
+            command = command + "\nset security nat source rule-set NAT_SRC_VPN rule %s-%s match destination-port %s" % \
             (self.vpn_general["name"], env["env"], env["port"])
 
-        for env in self.encryption_domains["local"]: command = command + "\nset security nat source rule-set NAT_SRC_VPN rule %s-%s_OUT-SNAT then source-nat pool %s" % \
+        for env in self.encryption_domains["local"]: command = command + "\nset security nat source rule-set NAT_SRC_VPN rule %s-%s then source-nat pool %s" % \
             (self.vpn_general["name"], env["env"], self.snat_pools_names[env["env"]])
 
         return command
@@ -277,19 +242,7 @@ class vpn:
         command = ""
 
         for env in self.snat_pools:
-            for pool in env["nets"]: command = command + "\ndelete security nat source rule-set NAT_SRC_VPN rule %s-%s_OUT-SNAT match source-address %s" % \
-            (self.vpn_general["name"], env["env"], pool)
-
-        for env in self.encryption_domains["remote"]:
-             command = command + "\ndelete security nat source rule-set NAT_SRC_VPN rule %s-%s_OUT-SNAT match destination-address %s" % \
-             (self.vpn_general["name"], env["env"], env["net"])
-
-        for env in self.ports["dports"]:
-            command = command + "\ndelete security nat source rule-set NAT_SRC_VPN rule %s-%s_OUT-SNAT match destination-port %s" % \
-            (self.vpn_general["name"], env["env"], env["port"])
-
-        for env in self.encryption_domains["local"]: command = command + "\ndelete security nat source rule-set NAT_SRC_VPN rule %s-%s_OUT-SNAT then source-nat pool %s" % \
-            (self.vpn_general["name"], env["env"], self.snat_pools_names[env["env"]])
+            command = command + "\ndelete security nat source rule-set NAT_SRC_VPN rule %s-%s" %  (self.vpn_general["name"], env["env"])
 
         return command
 
@@ -310,12 +263,9 @@ class vpn:
     def inbound_dnat_pool_delete(self):
         dpools = ""
 
-        self.dnat_pool_names = {}
-
         for env in self.local_server:
-            dpools = dpools + "\ndelete security nat destination pool %s_%s_%s address %s" % \
-            (self.vpn_general["name"], env["env"], env["server"].replace(".", "_").split("/")[0], env["server"])
-            self.dnat_pool_names[env["env"]] = "%s_%s_%s" % (self.vpn_general["name"], env["env"], env["server"].replace(".", "_").split("/")[0])
+            dpools = dpools + "\ndelete security nat destination pool %s_%s_%s" % \
+            (self.vpn_general["name"], env["env"], env["server"].replace(".", "_").split("/")[0])
 
         return dpools
 
@@ -324,19 +274,19 @@ class vpn:
         command = ""
 
         for env in self.encryption_domains["remote"]:
-            command = command + "\nset security nat destination rule-set NAT_DEST_VPN rule %s_%s_IN-DNAT match source-address %s" % \
+            command = command + "\nset security nat destination rule-set NAT_DEST_VPN rule %s_%s match source-address %s" % \
             (self.vpn_general["name"], env["env"], env["net"])
 
         for env in self.encryption_domains["local"]:
-            command = command + "\nset security nat destination rule-set NAT_DEST_VPN rule %s_%s_IN-DNAT match destination-address %s" % \
+            command = command + "\nset security nat destination rule-set NAT_DEST_VPN rule %s_%s match destination-address %s" % \
             (self.vpn_general["name"], env["env"], env["net"])
 
         for env in self.ports["lports"]:
-            command = command + "\nset security nat destination rule-set NAT_DEST_VPN rule %s_%s_IN-DNAT match destination-port %s" % \
+            command = command + "\nset security nat destination rule-set NAT_DEST_VPN rule %s_%s match destination-port %s" % \
             (self.vpn_general["name"], env["env"], env["port"])
 
         for env in self.local_server:
-            command = command + "\nset security nat destination rule-set NAT_DEST_VPN rule %s_%s_IN-DNAT then destination-nat pool %s" % \
+            command = command + "\nset security nat destination rule-set NAT_DEST_VPN rule %s_%s then destination-nat pool %s" % \
             (self.vpn_general["name"], env["env"], self.dnat_pool_names[env["env"]])
 
         return command
@@ -345,20 +295,8 @@ class vpn:
         command = ""
 
         for env in self.encryption_domains["remote"]:
-            command = command + "\ndelete security nat destination rule-set NAT_DEST_VPN rule %s_%s_IN-DNAT match source-address %s" % \
-            (self.vpn_general["name"], env["env"], env["net"])
-
-        for env in self.encryption_domains["local"]:
-            command = command + "\ndelete security nat destination rule-set NAT_DEST_VPN rule %s_%s_IN-DNAT match destination-address %s" % \
-            (self.vpn_general["name"], env["env"], env["net"])
-
-        for env in self.ports["lports"]:
-            command = command + "\ndelete security nat destination rule-set NAT_DEST_VPN rule %s_%s_IN-DNAT match destination-port %s" % \
-            (self.vpn_general["name"], env["env"], env["port"])
-
-        for env in self.local_server:
-            command = command + "\ndelete security nat destination rule-set NAT_DEST_VPN rule %s_%s_IN-DNAT then destination-nat pool %s" % \
-            (self.vpn_general["name"], env["env"], self.dnat_pool_names[env["env"]])
+            command = command + "\ndelete security nat destination rule-set NAT_DEST_VPN rule %s_%s" % \
+            (self.vpn_general["name"], env["env"])
 
         return command
 
@@ -370,19 +308,20 @@ class vpn:
         self.inbound_spools_names = {}
 
         for env in self.nat_encryption_domains["remote"]:
-            inbound_spools = inbound_spools + "\nset security nat source pool %s_%s_%s address %s" % (self.vpn_general["name"], env["env"], env["net"].replace(".", "_").split("/")[0], env["net"])
-            self.inbound_spools_names[env["env"]] = "%s_%s_%s" % (self.vpn_general["name"], env["env"], env["net"].replace(".", "_").split("/")[0])
+            source_pool_name = "%s_%s_%s" % (self.vpn_general["name"], env["env"], env["net"].replace(".", "_").split("/")[0])
+            if source_pool_name <= 31:
+                inbound_spools = inbound_spools + "\nset security nat source pool %s_%s_%s address %s" % (self.vpn_general["name"], env["env"], env["net"].replace(".", "_").split("/")[0], env["net"])
+                self.inbound_spools_names[env["env"]] = "%s_%s_%s" % (self.vpn_general["name"], env["env"], env["net"].replace(".", "_").split("/")[0])
+            else:
+                raise ValueError("Source pool name: %s is too long, it must not be longer than 31 characters and it contains %s" % (source_pool_name, len(source_pool_name)))
 
         return inbound_spools
 
     def inbound_source_pool_delete(self):
         inbound_spools = ""
 
-        self.inbound_spools_names = {}
-
         for env in self.nat_encryption_domains["remote"]:
-            inbound_spools = inbound_spools + "\ndelete security nat source pool %s_%s_%s address %s" % (self.vpn_general["name"], env["env"], env["net"].replace(".", "_").split("/")[0], env["net"])
-            self.inbound_spools_names[env["env"]] = "%s_%s_%s" % (self.vpn_general["name"], env["env"], env["net"].replace(".", "_").split("/")[0])
+            inbound_spools = inbound_spools + "\ndelete security nat source pool %s_%s_%s" % (self.vpn_general["name"], env["env"], env["net"].replace(".", "_").split("/")[0])
 
         return inbound_spools
 
@@ -390,19 +329,19 @@ class vpn:
         command = ""
 
         for env in self.encryption_domains["remote"]:
-            command = command + "\nset security nat source rule-set SNAT_VPN_TO_B2B rule %s_%s_IN-SNAT match source-address %s" % \
+            command = command + "\nset security nat source rule-set SNAT_VPN_TO_B2B rule %s_%s match source-address %s" % \
             (self.vpn_general["name"], env["env"], env["net"])
 
         for env in self.local_server:
-            command = command + "\nset security nat source rule-set SNAT_VPN_TO_B2B rule %s_%s_IN-SNAT match destination-address %s" % \
+            command = command + "\nset security nat source rule-set SNAT_VPN_TO_B2B rule %s_%s match destination-address %s" % \
             (self.vpn_general["name"], env["env"], env["server"])
 
         for env in self.ports["lports"]:
-            command = command + "\nset security nat source rule-set SNAT_VPN_TO_B2B rule %s_%s_IN-SNAT match destination-port %s" % \
+            command = command + "\nset security nat source rule-set SNAT_VPN_TO_B2B rule %s_%s match destination-port %s" % \
             (self.vpn_general["name"], env["env"], env["port"])
 
         for env in self.nat_encryption_domains["remote"]:
-            command = command + "\nset security nat source rule-set SNAT_VPN_TO_B2B rule %s_%s_IN-SNAT then source-nat pool %s" % \
+            command = command + "\nset security nat source rule-set SNAT_VPN_TO_B2B rule %s_%s then source-nat pool %s" % \
             (self.vpn_general["name"], env["env"], self.inbound_spools_names[env["env"]])
 
         return command
@@ -411,20 +350,8 @@ class vpn:
         command = ""
 
         for env in self.encryption_domains["remote"]:
-            command = command + "\ndelete security nat source rule-set SNAT_VPN_TO_B2B rule %s_%s_IN-SNAT match source-address %s" % \
-            (self.vpn_general["name"], env["env"], env["net"])
-
-        for env in self.local_server:
-            command = command + "\ndelete security nat source rule-set SNAT_VPN_TO_B2B rule %s_%s_IN-SNAT match destination-address %s" % \
-            (self.vpn_general["name"], env["env"], env["server"])
-
-        for env in self.ports["lports"]:
-            command = command + "\ndelete security nat source rule-set SNAT_VPN_TO_B2B rule %s_%s_IN-SNAT match destination-port %s" % \
-            (self.vpn_general["name"], env["env"], env["port"])
-
-        for env in self.nat_encryption_domains["remote"]:
-            command = command + "\ndelete security nat source rule-set SNAT_VPN_TO_B2B rule %s_%s_IN-SNAT then source-nat pool %s" % \
-            (self.vpn_general["name"], env["env"], self.inbound_spools_names[env["env"]])
+            command = command + "\ndelete security nat source rule-set SNAT_VPN_TO_B2B rule %s_%s" % \
+            (self.vpn_general["name"], env["env"])
 
         return command
 
@@ -440,54 +367,50 @@ class policy:
         self.ports = settings["ports"]
         self.local_server = settings["local_server"]
 
-    def applications(self):
+    def applications_local(self):
         command = ""
 
         self.applications_names_local = {}
 
-        self.applications_names_remote = {}
-
         for app in self.ports["lports"]:
-            command = command + "\nset applications application %s-%s-RPORT-TCP-%s protocol tcp" % (self.vpn_general["name"], app["name"], app["port"])
-            command = command + "\nset applications application %s-%s-RPORT-TCP-%s destination-port %s" % (self.vpn_general["name"], app["name"], app["port"], app["port"])
-            self.applications_names_local[app["env"]] = "%s-%s-RPORT-TCP-%s" % (self.vpn_general["name"], app["name"], app["port"])
-
-
-        for app in self.ports["dports"]:
             command = command + "\nset applications application %s-%s-LPORT-TCP-%s protocol tcp" % (self.vpn_general["name"], app["name"], app["port"])
             command = command + "\nset applications application %s-%s-LPORT-TCP-%s destination-port %s" % (self.vpn_general["name"], app["name"], app["port"], app["port"])
-            self.applications_names_remote[app["env"]] = "%s-%s-LPORT-TCP-%s" % (self.vpn_general["name"], app["name"], app["port"])
+            self.applications_names_local[app["env"]] = "%s-%s-LPORT-TCP-%s" % (self.vpn_general["name"], app["name"], app["port"])
 
         return command
 
-    def applications_delete(self):
+    def applications_local_delete(self):
         command = ""
 
-        self.applications_names_local = {}
+        for app in self.ports["lports"]:
+            command = command + "\ndelete applications application %s-%s-LPORT-TCP-%s" % (self.vpn_general["name"], app["name"], app["port"])
+
+        return command
+
+    def applications_remote(self):
+        command = ""
 
         self.applications_names_remote = {}
 
-        for app in self.ports["lports"]:
-            command = command + "\ndelete applications application %s-%s-RPORT-TCP-%s protocol tcp" % (self.vpn_general["name"], app["name"], app["port"])
-            command = command + "\ndelete applications application %s-%s-RPORT-TCP-%s destination-port %s" % (self.vpn_general["name"], app["name"], app["port"], app["port"])
-            self.applications_names_local[app["env"]] = "%s-%s-RPORT-TCP-%s" % (self.vpn_general["name"], app["name"], app["port"])
-
-
         for app in self.ports["dports"]:
-            command = command + "\ndelete applications application %s-%s-LPORT-TCP-%s protocol tcp" % (self.vpn_general["name"], app["name"], app["port"])
-            command = command + "\ndelete applications application %s-%s-LPORT-TCP-%s destination-port %s" % (self.vpn_general["name"], app["name"], app["port"], app["port"])
-            self.applications_names_remote[app["env"]] = "%s-%s-LPORT-TCP-%s" % (self.vpn_general["name"], app["name"], app["port"])
+            command = command + "\nset applications application %s-%s-RPORT-TCP-%s protocol tcp" % (self.vpn_general["name"], app["name"], app["port"])
+            command = command + "\nset applications application %s-%s-RPORT-TCP-%s destination-port %s" % (self.vpn_general["name"], app["name"], app["port"], app["port"])
+            self.applications_names_remote[app["env"]] = "%s-%s-RPORT-TCP-%s" % (self.vpn_general["name"], app["name"], app["port"])
 
         return command
 
-    def address_book(self):
+    def applications_remote_delete(self):
+        command = ""
+
+        for app in self.ports["dports"]:
+            command = command + "\ndelete applications application %s-%s-RPORT-TCP-%s" % (self.vpn_general["name"], app["name"], app["port"])
+
+        return command
+
+    def address_book_dmz_b2b(self):
         command = ""
 
         self.address_book_dmz_b2b = []
-
-        self.address_book_dmz_b2b_server = {}
-
-        self.address_book_dmz_vpn = {}
 
         for env in self.snat_pools:
             for source in env["nets"]:
@@ -495,10 +418,24 @@ class policy:
                 (env["name"], env["env"], source, source)
                 self.address_book_dmz_b2b.append({env["env"] : "%s_%s_%s" % (env["name"], env["env"], source)})
 
+        return command
+
+    def address_book_dmz_b2b_server(self):
+        command = ""
+
+        self.address_book_dmz_b2b_server = {}
+
         for env in self.local_server:
             command = command + "\nset security zones security-zone DMZ_B2B address-book address %s_%s_%s %s" % \
             (env["name"], env["env"], env["server"], env["server"])
             self.address_book_dmz_b2b_server[env["env"]] = "%s_%s_%s" % (env["name"], env["env"], env["server"])
+
+        return command
+
+    def address_book_dmz_vpn(self):
+        command = ""
+
+        self.address_book_dmz_vpn = {}
 
         for env in self.encryption_domains["remote"]:
             command = command + "\nset security zones security-zone DMZ_VPN address-book address %s_%s_%s %s" % \
@@ -507,30 +444,37 @@ class policy:
 
         return command
 
-    def address_book_delete(self):
+    def address_book_dmz_b2b_delete(self):
         command = ""
 
         self.address_book_dmz_b2b = []
 
+        for env in self.snat_pools:
+            for source in env["nets"]:
+                command = command + "\ndelete security zones security-zone DMZ_B2B address-book address %s_%s_%s" % \
+                (env["name"], env["env"], source)
+
+        return command
+
+    def address_book_dmz_b2b_server_delete(self):
+        command = ""
+
         self.address_book_dmz_b2b_server = {}
+
+        for env in self.local_server:
+            command = command + "\ndelete security zones security-zone DMZ_B2B address-book address %s_%s_%s" % \
+            (env["name"], env["env"], env["server"])
+
+        return command
+
+    def address_book_dmz_vpn_delete(self):
+        command = ""
 
         self.address_book_dmz_vpn = {}
 
-        for env in self.snat_pools:
-            for source in env["nets"]:
-                command = command + "\ndelete security zones security-zone DMZ_B2B address-book address %s_%s_%s %s" % \
-                (env["name"], env["env"], source, source)
-                self.address_book_dmz_b2b.append({env["env"] : "%s_%s_%s" % (env["name"], env["env"], source)})
-
-        for env in self.local_server:
-            command = command + "\ndelete security zones security-zone DMZ_B2B address-book address %s_%s_%s %s" % \
-            (env["name"], env["env"], env["server"], env["server"])
-            self.address_book_dmz_b2b_server[env["env"]] = "%s_%s_%s" % (env["name"], env["env"], env["server"])
-
         for env in self.encryption_domains["remote"]:
-            command = command + "\ndelete security zones security-zone DMZ_VPN address-book address %s_%s_%s %s" % \
-            (self.vpn_general["name"], env["env"], env["net"], env["net"])
-            self.address_book_dmz_vpn[env["env"]] = "%s_%s_%s" % (self.vpn_general["name"], env["env"], env["net"])
+            command = command + "\ndelete security zones security-zone DMZ_VPN address-book address %s_%s_%s" % \
+            (self.vpn_general["name"], env["env"], env["net"])
 
         return command
 
@@ -555,27 +499,16 @@ class policy:
         for env in self.encryption_domains["remote"]:
             command = command + "\nset security policies from-zone DMZ_B2B to-zone DMZ_VPN policy ACCESS_TO_%s_%s_SERVERS then permit" % \
             (self.vpn_general["name"], env["env"])
+            command = command + "\nset security policies from-zone DMZ_B2B to-zone DMZ_VPN policy ACCESS_TO_%s_%s_SERVERS then log session-init" % \
+            (self.vpn_general["name"], env["env"])
 
         return command
 
     def outbound_delete(self):
         command = ""
 
-        for env in self.address_book_dmz_b2b:
-            for k, v in env.items():
-                command = command + "\ndelete security policies from-zone DMZ_B2B to-zone DMZ_VPN policy ACCESS_TO_%s_%s_SERVERS match source-address %s" % \
-                (self.vpn_general["name"], k, v)
-
         for env in self.encryption_domains["remote"]:
-            command = command + "\ndelete security policies from-zone DMZ_B2B to-zone DMZ_VPN policy ACCESS_TO_%s_%s_SERVERS match destination-address %s" % \
-            (self.vpn_general["name"], env["env"], self.address_book_dmz_vpn[env["env"]])
-
-        for env in self.ports["dports"]:
-            command = command + "\ndelete security policies from-zone DMZ_B2B to-zone DMZ_VPN policy ACCESS_TO_%s_%s_SERVERS match application %s" % \
-            (self.vpn_general["name"], env["env"], self.applications_names_remote[env["env"]])
-
-        for env in self.encryption_domains["remote"]:
-            command = command + "\ndelete security policies from-zone DMZ_B2B to-zone DMZ_VPN policy ACCESS_TO_%s_%s_SERVERS then permit" % \
+            command = command + "\ndelete security policies from-zone DMZ_B2B to-zone DMZ_VPN policy ACCESS_TO_%s_%s_SERVERS" % \
             (self.vpn_general["name"], env["env"])
 
         return command
@@ -599,6 +532,7 @@ class policy:
 
         for env in self.local_server:
             command = command + "\nset security policies from-zone DMZ_VPN to-zone DMZ_B2B policy ACCESS_FROM_%s_%s then permit" % (self.vpn_general["name"], env["env"])
+            command = command + "\nset security policies from-zone DMZ_VPN to-zone DMZ_B2B policy ACCESS_FROM_%s_%s then log session-init" % (self.vpn_general["name"], env["env"])
 
         return command
 
@@ -606,25 +540,28 @@ class policy:
         command = ""
 
         for env in self.encryption_domains["remote"]:
-            command = command + "\ndelete security policies from-zone DMZ_VPN to-zone DMZ_B2B policy ACCESS_FROM_%s_%s match source-address %s" % \
-            (self.vpn_general["name"], env["env"], self.address_book_dmz_vpn[env["env"]])
-
-        for env, dst in self.address_book_dmz_b2b_server.items():
-            command = command + "\ndelete security policies from-zone DMZ_VPN to-zone DMZ_B2B policy ACCESS_FROM_%s_%s match destination-address %s" % \
-            (self.vpn_general["name"], env, dst)
-
-        for env in self.ports["lports"]:
-            command = command + "\ndelete security policies from-zone DMZ_VPN to-zone DMZ_B2B policy ACCESS_FROM_%s_%s match application %s" % \
-            (self.vpn_general["name"], env["env"], self.applications_names_local[env["env"]])
-
-        for env in self.local_server:
-            command = command + "\ndelete security policies from-zone DMZ_VPN to-zone DMZ_B2B policy ACCESS_FROM_%s_%s then permit" % (self.vpn_general["name"], env["env"])
+            command = command + "\ndelete security policies from-zone DMZ_VPN to-zone DMZ_B2B policy ACCESS_FROM_%s_%s" % \
+            (self.vpn_general["name"], env["env"])
 
         return command
 
+def print_help(ctx, value):
+    if value is False:
+        click.echo(ctx.get_help())
+        #ctx.exit()
+
 @click.command()
-@click.option('--delete', is_flag=True, help='If you want to delete a VPN already configured with the params inside the json_config file.')
-def main(delete):
+@click.option('--delete', default=None, help='If you want to delete a VPN already configured with the params inside the json_config file. You should use "in", "out" or "in_and_out" as possible parameters, as example, --delete in')
+@click.option('--inbound', is_flag=True, help='If you want to create a VPN with inbound traffic only')
+@click.option('--outbound', is_flag=True, help='If you want to create a VPN with outbound traffic only')
+@click.option('--in_and_out', is_flag=True, help='If you want to create a VPN with inbound and outbound traffic')
+@click.pass_context
+
+def main(ctx, delete, inbound, outbound, in_and_out):
+    if delete == None and (inbound is False and outbound is False and in_and_out is False):
+        print("\nNo options passed!\n")
+        print_help(ctx, value=False)
+
     try:
         input_file = open("config.json", "r").read()
         settings = json.loads(input_file)
@@ -635,7 +572,7 @@ def main(delete):
     new_vpn = vpn(settings)
     new_policy = policy(settings)
 
-    if delete:
+    if delete == "in_and_out":
         print(new_vpn.phase_1_delete())
         print(new_vpn.phase_2_delete())
         print(new_vpn.gateway_delete())
@@ -651,11 +588,78 @@ def main(delete):
         print(new_vpn.inbound_dnat_delete())
         print(new_vpn.inbound_source_pool_delete())
         print(new_vpn.inbound_snat_delete())
-        print(new_policy.applications_delete())
-        print(new_policy.address_book_delete())
+        print(new_policy.applications_local_delete())
+        print(new_policy.applications_remote_delete())
+        print(new_policy.address_book_dmz_b2b_delete())
+        print(new_policy.address_book_dmz_b2b_server_delete())
+        print(new_policy.address_book_dmz_vpn_delete())
         print(new_policy.outbound_delete())
         print(new_policy.inbound_delete())
-    else:
+    elif delete == "in":
+        print(new_vpn.phase_1_delete())
+        print(new_vpn.phase_2_delete())
+        print(new_vpn.gateway_delete())
+        print(new_vpn.vpn_delete())
+        print(new_vpn.tunel_interface_delete())
+        print(new_vpn.static_route_delete())
+        print(new_vpn.prefix_list_delete())
+        print(new_vpn.inbound_dnat_pool_delete())
+        print(new_vpn.inbound_dnat_delete())
+        print(new_vpn.inbound_source_pool_delete())
+        print(new_vpn.inbound_snat_delete())
+        print(new_policy.applications_local_delete())
+        print(new_policy.address_book_dmz_b2b_server_delete())
+        print(new_policy.address_book_dmz_vpn_delete())
+        print(new_policy.inbound_delete())
+    elif delete == "out":
+        print(new_vpn.phase_1_delete())
+        print(new_vpn.phase_2_delete())
+        print(new_vpn.gateway_delete())
+        print(new_vpn.vpn_delete())
+        print(new_vpn.tunel_interface_delete())
+        print(new_vpn.static_route_delete())
+        print(new_vpn.prefix_list_delete())
+        print(new_vpn.outbound_dnat_pool_delete())
+        print(new_vpn.outbound_dnat_delete())
+        print(new_vpn.outbound_source_pool_delete())
+        print(new_vpn.outbound_snat_delete())
+        print(new_policy.applications_remote_delete())
+        print(new_policy.address_book_dmz_b2b_delete())
+        print(new_policy.address_book_dmz_vpn_delete())
+        print(new_policy.outbound_delete())
+    elif inbound:
+        print(new_vpn.phase_1())
+        print(new_vpn.phase_2())
+        print(new_vpn.gateway())
+        print(new_vpn.vpn())
+        print(new_vpn.tunel_interface())
+        print(new_vpn.static_route())
+        print(new_vpn.prefix_list())
+        print(new_vpn.inbound_dnat_pool())
+        print(new_vpn.inbound_dnat())
+        print(new_vpn.inbound_source_pool())
+        print(new_vpn.inbound_snat())
+        print(new_policy.applications_local())
+        print(new_policy.address_book_dmz_b2b_server())
+        print(new_policy.address_book_dmz_vpn())
+        print(new_policy.inbound())
+    elif outbound:
+        print(new_vpn.phase_1())
+        print(new_vpn.phase_2())
+        print(new_vpn.gateway())
+        print(new_vpn.vpn())
+        print(new_vpn.tunel_interface())
+        print(new_vpn.static_route())
+        print(new_vpn.prefix_list())
+        print(new_vpn.outbound_dnat_pool())
+        print(new_vpn.outbound_dnat())
+        print(new_vpn.outbound_source_pool())
+        print(new_vpn.outbound_snat())
+        print(new_policy.applications_remote())
+        print(new_policy.address_book_dmz_b2b())
+        print(new_policy.address_book_dmz_vpn())
+        print(new_policy.outbound())
+    elif in_and_out:
         print(new_vpn.phase_1())
         print(new_vpn.phase_2())
         print(new_vpn.gateway())
@@ -671,10 +675,16 @@ def main(delete):
         print(new_vpn.inbound_dnat())
         print(new_vpn.inbound_source_pool())
         print(new_vpn.inbound_snat())
-        print(new_policy.applications())
-        print(new_policy.address_book())
+        print(new_policy.applications_local())
+        print(new_policy.applications_remote())
+        print(new_policy.address_book_dmz_b2b())
+        print(new_policy.address_book_dmz_b2b_server())
+        print(new_policy.address_book_dmz_vpn())
         print(new_policy.outbound())
         print(new_policy.inbound())
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        print (e)
