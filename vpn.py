@@ -1,5 +1,3 @@
-#import sys
-#import ipaddress
 import json
 import click
 
@@ -546,21 +544,22 @@ class policy:
 
         return command
 
-def print_help(ctx, param, value):
+def print_help(ctx, value):
     if value is False:
         click.echo(ctx.get_help())
-        ctx.exit()
+        #ctx.exit()
 
 @click.command()
-@click.option('--delete', default=None, help='If you want to delete a VPN already configured with the params inside the json_config file. You should use "in", "out" or "in_and_out" as possible parameters, as example, --delete=in')
+@click.option('--delete', default=None, help='If you want to delete a VPN already configured with the params inside the json_config file. You should use "in", "out" or "in_and_out" as possible parameters, as example, --delete in')
 @click.option('--inbound', is_flag=True, help='If you want to create a VPN with inbound traffic only')
 @click.option('--outbound', is_flag=True, help='If you want to create a VPN with outbound traffic only')
 @click.option('--in_and_out', is_flag=True, help='If you want to create a VPN with inbound and outbound traffic')
 @click.pass_context
+
 def main(ctx, delete, inbound, outbound, in_and_out):
     if delete == None and (inbound is False and outbound is False and in_and_out is False):
-        print("No options passed!")
-        print_help(ctx, param=None, value=False)
+        print("\nNo options passed!\n")
+        print_help(ctx, value=False)
 
     try:
         input_file = open("config.json", "r").read()
@@ -596,9 +595,37 @@ def main(ctx, delete, inbound, outbound, in_and_out):
         print(new_policy.outbound_delete())
         print(new_policy.inbound_delete())
     elif delete == "in":
-        print("volamos la inbound")
+        print(new_vpn.phase_1_delete())
+        print(new_vpn.phase_2_delete())
+        print(new_vpn.gateway_delete())
+        print(new_vpn.vpn_delete())
+        print(new_vpn.tunel_interface_delete())
+        print(new_vpn.static_route_delete())
+        print(new_vpn.prefix_list_delete())
+        print(new_vpn.inbound_dnat_pool_delete())
+        print(new_vpn.inbound_dnat_delete())
+        print(new_vpn.inbound_source_pool_delete())
+        print(new_vpn.inbound_snat_delete())
+        print(new_policy.applications_local_delete())
+        print(new_policy.address_book_dmz_b2b_server_delete())
+        print(new_policy.address_book_dmz_vpn_delete())
+        print(new_policy.inbound_delete())
     elif delete == "out":
-        print("volamos la outbound")
+        print(new_vpn.phase_1_delete())
+        print(new_vpn.phase_2_delete())
+        print(new_vpn.gateway_delete())
+        print(new_vpn.vpn_delete())
+        print(new_vpn.tunel_interface_delete())
+        print(new_vpn.static_route_delete())
+        print(new_vpn.prefix_list_delete())
+        print(new_vpn.outbound_dnat_pool_delete())
+        print(new_vpn.outbound_dnat_delete())
+        print(new_vpn.source_pool_delete())
+        print(new_vpn.outbound_snat_delete())
+        print(new_policy.applications_remote_delete())
+        print(new_policy.address_book_dmz_b2b_delete())
+        print(new_policy.address_book_dmz_vpn_delete())
+        print(new_policy.outbound_delete())
     elif inbound:
         print(new_vpn.phase_1())
         print(new_vpn.phase_2())
