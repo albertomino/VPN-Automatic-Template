@@ -229,7 +229,7 @@ class vpn:
                 command = command + "\nset security nat source rule-set NAT_SRC_VPN rule %s-%s match destination-address %s" % \
              (self.vpn_general["name"], env["env"], env["net"])
             else:
-                return "Rule_name: %s is too long, it must not be longer than 31 characters and it contains %s" % (rule_name, len(rule_name))
+                raise ValueError("Rule_name: %s is too long, it must not be longer than 31 characters and it contains %s" % (rule_name, len(rule_name)))
 
         for env in self.ports["dports"]:
             command = command + "\nset security nat source rule-set NAT_SRC_VPN rule %s-%s match destination-port %s" % \
@@ -382,7 +382,6 @@ class policy:
 
         for app in self.ports["lports"]:
             command = command + "\ndelete applications application %s-%s-LPORT-TCP-%s" % (self.vpn_general["name"], app["name"], app["port"])
-            #command = command + "\ndelete applications application %s-%s-LPORT-TCP-%s destination-port %s" % (self.vpn_general["name"], app["name"], app["port"], app["port"])
 
         return command
 
@@ -450,9 +449,9 @@ class policy:
 
         for env in self.snat_pools:
             for source in env["nets"]:
-                command = command + "\ndelete security zones security-zone DMZ_B2B address-book address %s_%s_%s %s" % \
-                (env["name"], env["env"], source, source)
-                self.address_book_dmz_b2b.append({env["env"] : "%s_%s_%s" % (env["name"], env["env"], source)})
+                command = command + "\ndelete security zones security-zone DMZ_B2B address-book address %s_%s_%s" % \
+                (env["name"], env["env"], source)
+                #self.address_book_dmz_b2b.append({env["env"] : "%s_%s_%s" % (env["name"], env["env"], source)})
 
         return command
 
@@ -462,9 +461,9 @@ class policy:
         self.address_book_dmz_b2b_server = {}
 
         for env in self.local_server:
-            command = command + "\ndelete security zones security-zone DMZ_B2B address-book address %s_%s_%s %s" % \
-            (env["name"], env["env"], env["server"], env["server"])
-            self.address_book_dmz_b2b_server[env["env"]] = "%s_%s_%s" % (env["name"], env["env"], env["server"])
+            command = command + "\ndelete security zones security-zone DMZ_B2B address-book address %s_%s_%s" % \
+            (env["name"], env["env"], env["server"])
+            #self.address_book_dmz_b2b_server[env["env"]] = "%s_%s_%s" % (env["name"], env["env"], env["server"])
 
         return command
 
@@ -474,9 +473,9 @@ class policy:
         self.address_book_dmz_vpn = {}
 
         for env in self.encryption_domains["remote"]:
-            command = command + "\ndelete security zones security-zone DMZ_VPN address-book address %s_%s_%s %s" % \
-            (self.vpn_general["name"], env["env"], env["net"], env["net"])
-            self.address_book_dmz_vpn[env["env"]] = "%s_%s_%s" % (self.vpn_general["name"], env["env"], env["net"])
+            command = command + "\ndelete security zones security-zone DMZ_VPN address-book address %s_%s_%s" % \
+            (self.vpn_general["name"], env["env"], env["net"])
+            #self.address_book_dmz_vpn[env["env"]] = "%s_%s_%s" % (self.vpn_general["name"], env["env"], env["net"])
 
         return command
 
@@ -509,21 +508,8 @@ class policy:
     def outbound_delete(self):
         command = ""
 
-        for env in self.address_book_dmz_b2b:
-            for k, v in env.items():
-                command = command + "\ndelete security policies from-zone DMZ_B2B to-zone DMZ_VPN policy ACCESS_TO_%s_%s_SERVERS match source-address %s" % \
-                (self.vpn_general["name"], k, v)
-
         for env in self.encryption_domains["remote"]:
-            command = command + "\ndelete security policies from-zone DMZ_B2B to-zone DMZ_VPN policy ACCESS_TO_%s_%s_SERVERS match destination-address %s" % \
-            (self.vpn_general["name"], env["env"], self.address_book_dmz_vpn[env["env"]])
-
-        for env in self.ports["dports"]:
-            command = command + "\ndelete security policies from-zone DMZ_B2B to-zone DMZ_VPN policy ACCESS_TO_%s_%s_SERVERS match application %s" % \
-            (self.vpn_general["name"], env["env"], self.applications_names_remote[env["env"]])
-
-        for env in self.encryption_domains["remote"]:
-            command = command + "\ndelete security policies from-zone DMZ_B2B to-zone DMZ_VPN policy ACCESS_TO_%s_%s_SERVERS then permit" % \
+            command = command + "\ndelete security policies from-zone DMZ_B2B to-zone DMZ_VPN policy ACCESS_TO_%s_%s_SERVERS" % \
             (self.vpn_general["name"], env["env"])
 
         return command
@@ -555,27 +541,27 @@ class policy:
         command = ""
 
         for env in self.encryption_domains["remote"]:
-            command = command + "\ndelete security policies from-zone DMZ_VPN to-zone DMZ_B2B policy ACCESS_FROM_%s_%s match source-address %s" % \
-            (self.vpn_general["name"], env["env"], self.address_book_dmz_vpn[env["env"]])
-
-        for env, dst in self.address_book_dmz_b2b_server.items():
-            command = command + "\ndelete security policies from-zone DMZ_VPN to-zone DMZ_B2B policy ACCESS_FROM_%s_%s match destination-address %s" % \
-            (self.vpn_general["name"], env, dst)
-
-        for env in self.ports["lports"]:
-            command = command + "\ndelete security policies from-zone DMZ_VPN to-zone DMZ_B2B policy ACCESS_FROM_%s_%s match application %s" % \
-            (self.vpn_general["name"], env["env"], self.applications_names_local[env["env"]])
-
-        for env in self.local_server:
-            command = command + "\ndelete security policies from-zone DMZ_VPN to-zone DMZ_B2B policy ACCESS_FROM_%s_%s then permit" % (self.vpn_general["name"], env["env"])
+            command = command + "\ndelete security policies from-zone DMZ_VPN to-zone DMZ_B2B policy ACCESS_FROM_%s_%s" % \
+            (self.vpn_general["name"], env["env"])
 
         return command
 
+def print_help(ctx, param, value):
+    if value is False:
+        click.echo(ctx.get_help())
+        ctx.exit()
+
 @click.command()
-@click.option('--delete', is_flag=True, help='If you want to delete a VPN already configured with the params inside the json_config file.')
+@click.option('--delete', default=None, help='If you want to delete a VPN already configured with the params inside the json_config file. You should use "in", "out" or "in_and_out" as possible parameters, as example, --delete=in')
 @click.option('--inbound', is_flag=True, help='If you want to create a VPN with inbound traffic only')
 @click.option('--outbound', is_flag=True, help='If you want to create a VPN with outbound traffic only')
-def main(delete, inbound, outbound):
+@click.option('--in_and_out', is_flag=True, help='If you want to create a VPN with inbound and outbound traffic')
+@click.pass_context
+def main(ctx, delete, inbound, outbound, in_and_out):
+    if delete == None and (inbound is False and outbound is False and in_and_out is False):
+        print("No options passed!")
+        print_help(ctx, param=None, value=False)
+
     try:
         input_file = open("config.json", "r").read()
         settings = json.loads(input_file)
@@ -586,7 +572,7 @@ def main(delete, inbound, outbound):
     new_vpn = vpn(settings)
     new_policy = policy(settings)
 
-    if delete:
+    if delete == "in_and_out":
         print(new_vpn.phase_1_delete())
         print(new_vpn.phase_2_delete())
         print(new_vpn.gateway_delete())
@@ -609,6 +595,10 @@ def main(delete, inbound, outbound):
         print(new_policy.address_book_dmz_vpn_delete())
         print(new_policy.outbound_delete())
         print(new_policy.inbound_delete())
+    elif delete == "in":
+        print("volamos la inbound")
+    elif delete == "out":
+        print("volamos la outbound")
     elif inbound:
         print(new_vpn.phase_1())
         print(new_vpn.phase_2())
@@ -641,7 +631,7 @@ def main(delete, inbound, outbound):
         print(new_policy.address_book_dmz_b2b())
         print(new_policy.address_book_dmz_vpn())
         print(new_policy.outbound())
-    else:
+    elif in_and_out:
         print(new_vpn.phase_1())
         print(new_vpn.phase_2())
         print(new_vpn.gateway())
