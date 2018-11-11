@@ -548,7 +548,6 @@ class policy:
 def print_help(ctx, value):
     if value is False:
         click.echo(ctx.get_help())
-        #ctx.exit()
 
 @click.command()
 @click.option('--delete', default=None, help='If you want to delete a VPN already configured with the params inside the json_config file. You should use "in", "out" or "in_and_out" as possible parameters, as example, --delete in')
