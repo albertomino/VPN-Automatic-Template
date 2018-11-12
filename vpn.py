@@ -89,6 +89,12 @@ class vpn:
         "\nset security ipsec vpn %s ike ipsec-policy %s" % (self.vpn_tunnel_definition["name"], self.ipsec_policy["name"]) +\
         "\nset security ipsec vpn %s establish-tunnels immediately" % self.vpn_tunnel_definition["name"]
 
+        if self.vpn_tunnel_definition["traffic-selector"] == True:
+            for local in self.encryption_domains["local"]:
+                vpntunnel = vpntunnel + "\nset security ipsec vpn %s traffic-selector %s local-ip %s" % (self.vpn_tunnel_definition["name"], local["env"] , local["net"])
+            for remote in self.encryption_domains["remote"]:
+                vpntunnel = vpntunnel + "\nset security ipsec vpn %s traffic-selector %s remote-ip %s" % (self.vpn_tunnel_definition["name"], remote["env"] , remote["net"])
+
         return vpntunnel
 
     def vpn_delete(self):

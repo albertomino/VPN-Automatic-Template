@@ -5,7 +5,7 @@
        "purpose"     : "",
        "owner"       : "Payments Department",
        "ticket"      : "SD-######",
-       "team mail"   : "mail@mercadolibre.com"  
+       "team mail"   : "mail@mercadolibre.com"
    },
    "ike_proposal"          : {
        "name"                               : "VPN-TEMPLATE",
@@ -48,7 +48,8 @@
    },
    "vpn_tunnel_definition" : {
        "name"               : "VPN-TEMPLATE-TUNNEL",
-       "secure_interface"   : "43"
+       "secure_interface"   : "43",
+       "traffic-selector"   :   false
    },
    "encryption_domains"        : {
        "local"      : [{"net" : "10.195.3.121/32", "env" : "PROD"}, {"net" : "10.195.3.121/32", "env" : "DESA"}],
