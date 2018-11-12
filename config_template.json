@@ -4,7 +4,8 @@
        "description" : "VPN contra destileria VPN_de_juguete",
        "purpose"     : "",
        "owner"       : "Payments Department",
-       "ticket"      : "SD-######"
+       "ticket"      : "SD-######",
+       "team mail"   : "mail@mercadolibre.com"  
    },
    "ike_proposal"          : {
        "name"                               : "VPN-TEMPLATE",
