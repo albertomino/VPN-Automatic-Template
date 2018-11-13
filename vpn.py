@@ -213,6 +213,7 @@ class vpn:
         return snat_pools
 
     def outbound_source_pool_delete(self):
+        snat_pools = ""
 
         for ip in self.encryption_domains["local"]:
             snat_pools = snat_pools + "\ndelete security nat source pool %s_%s" % (self.vpn_general["name"], ip.get("env"))
