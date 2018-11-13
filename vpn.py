@@ -213,7 +213,6 @@ class vpn:
         return snat_pools
 
     def outbound_source_pool_delete(self):
-        snat_pools = ""
 
         for ip in self.encryption_domains["local"]:
             snat_pools = snat_pools + "\ndelete security nat source pool %s_%s" % (self.vpn_general["name"], ip.get("env"))
@@ -314,10 +313,10 @@ class vpn:
         self.inbound_spools_names = {}
 
         for env in self.nat_encryption_domains["remote"]:
-            source_pool_name = "%s_%s_%s" % (self.vpn_general["name"], env["env"], env["net"].replace(".", "_").split("/")[0])
-            if source_pool_name <= 31:
-                inbound_spools = inbound_spools + "\nset security nat source pool %s_%s_%s address %s" % (self.vpn_general["name"], env["env"], env["net"].replace(".", "_").split("/")[0], env["net"])
-                self.inbound_spools_names[env["env"]] = "%s_%s_%s" % (self.vpn_general["name"], env["env"], env["net"].replace(".", "_").split("/")[0])
+            source_pool_name = "%s_%s" % (self.vpn_general["name"], env["env"])
+            if len(source_pool_name) <= 31:
+                inbound_spools = inbound_spools + "\nset security nat source pool %s_%s address %s" % (self.vpn_general["name"], env["env"], env["net"])
+                self.inbound_spools_names[env["env"]] = "%s_%s" % (self.vpn_general["name"], env["env"])
             else:
                 raise ValueError("Source pool name: %s is too long, it must not be longer than 31 characters and it contains %s" % (source_pool_name, len(source_pool_name)))
 
@@ -587,7 +586,7 @@ def main(ctx, delete, inbound, outbound, in_and_out):
         print(new_vpn.prefix_list_delete())
         print(new_vpn.outbound_dnat_pool_delete())
         print(new_vpn.outbound_dnat_delete())
-        print(new_vpn.source_pool_delete())
+        print(new_vpn.outbound_source_pool_delete())
         print(new_vpn.outbound_snat_delete())
         print(new_vpn.inbound_dnat_pool_delete())
         print(new_vpn.inbound_dnat_delete())
@@ -674,7 +673,7 @@ def main(ctx, delete, inbound, outbound, in_and_out):
         print(new_vpn.prefix_list())
         print(new_vpn.outbound_dnat_pool())
         print(new_vpn.outbound_dnat())
-        print(new_vpn.source_pool())
+        print(new_vpn.outbound_source_pool())
         print(new_vpn.outbound_snat())
         print(new_vpn.inbound_dnat_pool())
         print(new_vpn.inbound_dnat())
