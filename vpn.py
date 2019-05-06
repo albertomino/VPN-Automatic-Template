@@ -81,7 +81,7 @@ class vpn:
 
         return ikegateway
 
-#VPN TUNEL DEFINITION
+#VPN TUNEL DEFINITION ##dsljsdl
     def vpn(self):
         vpntunnel = "" +\
         "\nset security ipsec vpn %s bind-interface st0.%s" % (self.vpn_tunnel_definition["name"], self.vpn_tunnel_definition["secure_interface"]) +\
