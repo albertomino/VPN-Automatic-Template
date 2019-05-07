@@ -81,7 +81,7 @@ class vpn:
 
         return ikegateway
 
-#VPN TUNEL DEFINITION ##dsljsdl
+#VPN TUNEL DEFINITION
     def vpn(self):
         vpntunnel = "" +\
         "\nset security ipsec vpn %s bind-interface st0.%s" % (self.vpn_tunnel_definition["name"], self.vpn_tunnel_definition["secure_interface"]) +\
@@ -94,6 +94,9 @@ class vpn:
                 vpntunnel = vpntunnel + "\nset security ipsec vpn %s traffic-selector %s local-ip %s" % (self.vpn_tunnel_definition["name"], local["env"] , local["net"])
             for remote in self.encryption_domains["remote"]:
                 vpntunnel = vpntunnel + "\nset security ipsec vpn %s traffic-selector %s remote-ip %s" % (self.vpn_tunnel_definition["name"], remote["env"] , remote["net"])
+        if self.vpn_tunnel_definition["proxy-identity"] == True:
+                vpntunnel = vpntunnel + "\nset security ipsec vpn %s proxy-identity local %s" % (self.vpn_tunnel_definition["name"],",".join([ x.get("net") for x in self.encryption_domains["local"] if x.get("env") == "PROD"]))
+                vpntunnel = vpntunnel + "\nset security ipsec vpn %s proxy-identity remote %s" % (self.vpn_tunnel_definition["name"],",".join([ x.get("net") for x in self.encryption_domains["remote"] if x.get("env") == "PROD"]))
 
         return vpntunnel
 
