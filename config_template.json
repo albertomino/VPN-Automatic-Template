@@ -44,7 +44,8 @@
        "name"       : "VPN-TEMPLATE-IPSEC-POLICY",
        "available_keys" : ["group1 | group2 | group5 | group14"],
        "keys"       : "group2",
-       "pfs"        : false
+       "pfs"        : false,
+       "proxy-identity"     : false
    },
    "vpn_tunnel_definition" : {
        "name"               : "VPN-TEMPLATE-TUNNEL",
