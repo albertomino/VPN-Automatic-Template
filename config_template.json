@@ -44,13 +44,13 @@
        "name"       : "VPN-TEMPLATE-IPSEC-POLICY",
        "available_keys" : ["group1 | group2 | group5 | group14"],
        "keys"       : "group2",
-       "pfs"        : false,
-       "proxy-identity"     : false
+       "pfs"        : false
    },
    "vpn_tunnel_definition" : {
        "name"               : "VPN-TEMPLATE-TUNNEL",
        "secure_interface"   : "43",
-       "traffic-selector"   :   false
+       "traffic-selector"   :   false,
+       "proxy-identity"     : false
    },
    "encryption_domains"        : {
        "local"      : [{"net" : "10.195.3.121/32", "env" : "PROD"}, {"net" : "10.195.3.121/32", "env" : "DESA"}],
